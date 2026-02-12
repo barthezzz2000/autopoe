@@ -1,0 +1,7 @@
+[project]
+name = "synora"
+version = "0.1.0"
+description = "A structured multi-agent framework for coordinated AI collaboration"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["fastapi[standard]"]
