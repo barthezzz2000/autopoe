@@ -1,0 +1,15 @@
+from __future__ import annotations
+
+from typing import Any, Protocol
+from collections.abc import Callable
+
+from app.models import LLMResponse
+
+
+class LLMProvider(Protocol):
+    def chat(
+        self,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+        on_chunk: Callable[[str, str], None] | None = None,
+    ) -> LLMResponse: ...

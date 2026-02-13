@@ -4,4 +4,10 @@ version = "0.1.0"
 description = "A structured multi-agent framework for coordinated AI collaboration"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = ["fastapi[standard]"]
+dependencies = [
+    "fastapi[standard]",
+    "httpx>=0.28.0",
+    "loguru>=0.7.0",
+    "pydantic-settings>=2.12.0",
+    "python-dotenv>=1.2.1",
+]
