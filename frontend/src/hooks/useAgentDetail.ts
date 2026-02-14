@@ -21,13 +21,16 @@ export function useAgentDetail(agentId: string | null) {
 
     fetch(`/api/agents/${agentId}`)
       .then((res) => res.json())
-      .then((data: AgentDetail) => {
-        if (!cancelled) {
-          clearAgentHistory(agentId);
-          setDetail(data);
-          setFetchedAt(Date.now());
+      .then((data) => {
+        if (cancelled) return;
+        if (data.error || !Array.isArray(data.history)) {
           setLoading(false);
+          return;
         }
+        clearAgentHistory(agentId);
+        setDetail(data as AgentDetail);
+        setFetchedAt(Date.now());
+        setLoading(false);
       })
       .catch(() => {
         if (!cancelled) setLoading(false);
