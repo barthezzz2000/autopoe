@@ -5,6 +5,7 @@ from typing import Any
 
 from app.models import LLMResponse, ModelInfo
 from app.providers import LLMProvider
+from app.providers.registry import ProviderType
 
 
 class DynamicProvider(LLMProvider):
@@ -21,26 +22,30 @@ class DynamicProvider(LLMProvider):
         cfg = find_provider(ms, ms.active_provider)
 
         if cfg:
-            key = (cfg.provider_type, cfg.api_base_url, cfg.api_key, ms.active_model)
+            provider_name = cfg.name
+            provider_type = ProviderType(cfg.provider_type)
+            api_base_url = cfg.api_base_url
+            api_key = cfg.api_key
+            model = ms.active_model
         else:
-            key = ("openai", "https://openrouter.ai/api/v1", "", ms.active_model)
+            provider_name = "OpenRouter"
+            provider_type = ProviderType.OPENAI
+            api_base_url = "https://openrouter.ai/api/v1"
+            api_key = ""
+            model = ms.active_model
+
+        key = (provider_name, provider_type, api_base_url, model)
 
         if self._cached_key == key and self._cached_provider is not None:
             return self._cached_provider
 
-        if cfg:
-            provider = create_provider(
-                provider_type=cfg.provider_type,
-                api_base_url=cfg.api_base_url,
-                api_key=cfg.api_key,
-                model=ms.active_model,
-            )
-        else:
-            provider = create_provider(
-                provider_type="openai",
-                api_base_url="https://openrouter.ai/api/v1",
-                model=ms.active_model,
-            )
+        provider = create_provider(
+            provider_name=provider_name,
+            provider_type=provider_type,
+            api_base_url=api_base_url,
+            api_key=api_key,
+            model=model,
+        )
 
         self._cached_key = key
         self._cached_provider = provider

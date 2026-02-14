@@ -27,24 +27,42 @@ BUILTIN_PROVIDERS: list[ProviderDef] = [
 
 
 def create_provider(
-    provider_type: str | ProviderType,
+    provider_name: str,
+    provider_type: ProviderType,
     api_base_url: str,
     api_key: str = "",
     model: str = "",
 ) -> LLMProvider:
-    pt = ProviderType(provider_type)
-
-    if pt == ProviderType.OPENAI:
+    if provider_type == ProviderType.OPENAI:
         from app.providers.openai import OpenAIProvider
-        return OpenAIProvider(api_base_url=api_base_url, api_key=api_key, model=model)
-    elif pt == ProviderType.ANTHROPIC:
+        return OpenAIProvider(
+            provider_name=provider_name,
+            api_base_url=api_base_url,
+            api_key=api_key,
+            model=model,
+        )
+    elif provider_type == ProviderType.ANTHROPIC:
         from app.providers.anthropic import AnthropicProvider
-        return AnthropicProvider(api_base_url=api_base_url, api_key=api_key, model=model)
-    elif pt == ProviderType.GEMINI:
+        return AnthropicProvider(
+            provider_name=provider_name,
+            api_base_url=api_base_url,
+            api_key=api_key,
+            model=model,
+        )
+    elif provider_type == ProviderType.GEMINI:
         from app.providers.gemini import GeminiProvider
-        return GeminiProvider(api_base_url=api_base_url, api_key=api_key, model=model)
-    elif pt == ProviderType.OLLAMA:
+        return GeminiProvider(
+            provider_name=provider_name,
+            api_base_url=api_base_url,
+            api_key=api_key,
+            model=model,
+        )
+    elif provider_type == ProviderType.OLLAMA:
         from app.providers.ollama import OllamaProvider
-        return OllamaProvider(api_base_url=api_base_url, model=model)
+        return OllamaProvider(
+            provider_name=provider_name,
+            api_base_url=api_base_url,
+            model=model,
+        )
 
-    raise ValueError(f"Unknown provider type: {pt}")
+    raise ValueError(f"Unknown provider type: {provider_type}")

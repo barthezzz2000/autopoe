@@ -49,7 +49,7 @@ interface ModelOption {
 }
 
 const PROVIDER_TYPES = [
-  { value: "openai", label: "OpenAI Compatible" },
+  { value: "openai", label: "OpenAI" },
   { value: "anthropic", label: "Anthropic" },
   { value: "gemini", label: "Google Gemini" },
   { value: "ollama", label: "Ollama" },
@@ -557,6 +557,7 @@ function ModelSettings({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        provider_name: activeProvider.name,
         provider_type: activeProvider.provider_type,
         api_base_url: activeProvider.api_base_url,
         api_key: activeProvider.api_key,
@@ -569,7 +570,7 @@ function ModelSettings({
           setModelOptions(data.models);
         }
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => {
         if (!cancelled) setLoadingModels(false);
       });

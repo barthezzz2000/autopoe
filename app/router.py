@@ -211,6 +211,7 @@ async def update_settings(req: UpdateSettingsRequest) -> dict:
 
 
 class ListModelsRequest(BaseModel):
+    provider_name: str
     provider_type: str
     api_base_url: str
     api_key: str = ""
@@ -218,11 +219,12 @@ class ListModelsRequest(BaseModel):
 
 @router.post("/api/providers/models")
 async def list_provider_models(req: ListModelsRequest) -> dict:
-    from app.providers.registry import create_provider
+    from app.providers.registry import create_provider, ProviderType
 
     try:
         provider = create_provider(
-            provider_type=req.provider_type,
+            provider_name=req.provider_name,
+            provider_type=ProviderType(req.provider_type),
             api_base_url=req.api_base_url,
             api_key=req.api_key,
         )

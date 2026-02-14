@@ -14,7 +14,13 @@ from app.providers import LLMProvider
 
 
 class OllamaProvider(LLMProvider):
-    def __init__(self, api_base_url: str, model: str = "") -> None:
+    def __init__(
+        self,
+        provider_name: str,
+        api_base_url: str,
+        model: str = "",
+    ) -> None:
+        self._provider_name = provider_name
         self._api_base_url = api_base_url.rstrip("/")
         self._model = model
         self._client = httpx.Client(timeout=5.0)
@@ -50,12 +56,22 @@ class OllamaProvider(LLMProvider):
                 body = response.read().decode()
                 elapsed = time.perf_counter() - t0
                 logger.error(
-                    "Ollama API error: {} - {} ({:.2f}s)",
+                    "LLM API error [provider={}, model={}, type=ollama]: {} - {} ({:.2f}s)",
+                    self._provider_name,
+                    self._model,
                     response.status_code,
-                    body[:200],
+                    body[:500],
                     elapsed,
                 )
-                raise RuntimeError(f"Ollama API error: {response.status_code} - {body}")
+                raise RuntimeError(
+                    f"LLM API error\n"
+                    f"Provider: {self._provider_name}\n"
+                    f"Type: ollama\n"
+                    f"Model: {self._model}\n"
+                    f"Base URL: {self._api_base_url}\n"
+                    f"Status: {response.status_code}\n"
+                    f"Response: {body}"
+                )
 
             for line in response.iter_lines():
                 if not line:
@@ -86,13 +102,6 @@ class OllamaProvider(LLMProvider):
                 if chunk.get("done", False):
                     break
 
-        elapsed = time.perf_counter() - t0
-        logger.debug(
-            "Ollama stream completed ({:.2f}s, model={})",
-            elapsed,
-            self._model,
-        )
-
         content = "".join(content_parts) or None
 
         if tool_calls_list:
@@ -109,5 +118,9 @@ class OllamaProvider(LLMProvider):
             models = data.get("models", [])
             return [ModelInfo(id=m.get("name", "")) for m in models]
         except Exception as e:
-            logger.error("Failed to list models from {}: {}", url, e)
+            logger.error(
+                "Failed to list models [provider={}, type=ollama]: {}",
+                self._provider_name,
+                e,
+            )
             return []

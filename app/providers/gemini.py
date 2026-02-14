@@ -14,7 +14,14 @@ from app.providers import LLMProvider
 
 
 class GeminiProvider(LLMProvider):
-    def __init__(self, api_base_url: str, api_key: str = "", model: str = "") -> None:
+    def __init__(
+        self,
+        provider_name: str,
+        api_base_url: str,
+        api_key: str = "",
+        model: str = "",
+    ) -> None:
+        self._provider_name = provider_name
         self._api_base_url = api_base_url.rstrip("/")
         self._api_key = api_key
         self._model = model
@@ -93,12 +100,22 @@ class GeminiProvider(LLMProvider):
                 body = response.read().decode()
                 elapsed = time.perf_counter() - t0
                 logger.error(
-                    "Gemini API error: {} - {} ({:.2f}s)",
+                    "LLM API error [provider={}, model={}, type=gemini]: {} - {} ({:.2f}s)",
+                    self._provider_name,
+                    self._model,
                     response.status_code,
-                    body[:200],
+                    body[:500],
                     elapsed,
                 )
-                raise RuntimeError(f"Gemini API error: {response.status_code} - {body}")
+                raise RuntimeError(
+                    f"LLM API error\n"
+                    f"Provider: {self._provider_name}\n"
+                    f"Type: gemini\n"
+                    f"Model: {self._model}\n"
+                    f"Base URL: {self._api_base_url}\n"
+                    f"Status: {response.status_code}\n"
+                    f"Response: {body}"
+                )
 
             for line in response.iter_lines():
                 if not line or line.startswith(":"):
@@ -133,13 +150,6 @@ class GeminiProvider(LLMProvider):
                             )
                         )
 
-        elapsed = time.perf_counter() - t0
-        logger.debug(
-            "Gemini stream completed ({:.2f}s, model={})",
-            elapsed,
-            self._model,
-        )
-
         content = "".join(content_parts) or None
 
         if tool_calls_list:
@@ -162,5 +172,9 @@ class GeminiProvider(LLMProvider):
                     result.append(ModelInfo(id=model_id))
             return result
         except Exception as e:
-            logger.error("Failed to list models from {}: {}", url, e)
+            logger.error(
+                "Failed to list models [provider={}, type=gemini]: {}",
+                self._provider_name,
+                e,
+            )
             return []

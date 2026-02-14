@@ -155,11 +155,13 @@ class Agent:
                     self._wait_for_input()
 
             except Exception as exc:
-                self._log.error("Agent error: {}", exc)
+                self._log.exception("Agent error")
+                import traceback
+                tb_str = traceback.format_exc()
                 self._append_history(
                     HistoryEntry(
                         type=HistoryType.ERROR,
-                        content=f"{type(exc).__name__}: {exc}",
+                        content=f"{type(exc).__name__}: {exc}\n\n{tb_str}",
                     )
                 )
                 self.set_state(AgentState.ERROR)
