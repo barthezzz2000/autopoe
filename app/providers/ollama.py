@@ -11,6 +11,7 @@ from loguru import logger
 
 from app.models import LLMResponse, ModelInfo, ToolCall
 from app.providers import LLMProvider
+from app.providers.thinking import ThinkTagParser
 
 
 class OllamaProvider(LLMProvider):
@@ -50,8 +51,10 @@ class OllamaProvider(LLMProvider):
         t0 = time.perf_counter()
 
         content_parts: list[str] = []
+        thinking_parts: list[str] = []
         tool_calls_list: list[ToolCall] = []
         chunk_count = 0
+        think_parser = ThinkTagParser()
 
         with self._client.stream(
             "POST",
@@ -93,9 +96,15 @@ class OllamaProvider(LLMProvider):
                 message = chunk.get("message", {})
                 text = message.get("content", "")
                 if text:
-                    content_parts.append(text)
-                    if on_chunk:
-                        on_chunk("content", text)
+                    for chunk_type, parsed in think_parser.feed(text):
+                        if chunk_type == "thinking":
+                            thinking_parts.append(parsed)
+                            if on_chunk:
+                                on_chunk("thinking", parsed)
+                        else:
+                            content_parts.append(parsed)
+                            if on_chunk:
+                                on_chunk("content", parsed)
 
                 for tc in message.get("tool_calls", []):
                     fn = tc.get("function", {})
@@ -110,20 +119,32 @@ class OllamaProvider(LLMProvider):
                 if chunk.get("done", False):
                     break
 
+        for chunk_type, text in think_parser.flush():
+            if chunk_type == "thinking":
+                thinking_parts.append(text)
+                if on_chunk:
+                    on_chunk("thinking", text)
+            else:
+                content_parts.append(text)
+                if on_chunk:
+                    on_chunk("content", text)
+
         elapsed = time.perf_counter() - t0
         content = "".join(content_parts) or None
+        thinking = "".join(thinking_parts) or None
 
         logger.debug(
-            "[{}] Ollama chat done: {:.2f}s, chunks={}, content_len={}, tool_calls={}",
+            "[{}] Ollama chat done: {:.2f}s, chunks={}, content_len={}, thinking_len={}, tool_calls={}",
             self._provider_name, elapsed, chunk_count,
             len(content) if content else 0,
+            len(thinking) if thinking else 0,
             len(tool_calls_list),
         )
 
         if tool_calls_list:
-            return LLMResponse(content=content, tool_calls=tool_calls_list)
+            return LLMResponse(content=content, tool_calls=tool_calls_list, thinking=thinking)
 
-        return LLMResponse(content=content or "")
+        return LLMResponse(content=content or "", thinking=thinking)
 
     def list_models(self) -> list[ModelInfo]:
         url = f"{self._api_base_url}/api/tags"

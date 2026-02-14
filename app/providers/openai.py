@@ -10,6 +10,37 @@ from loguru import logger
 
 from app.models import LLMResponse, ModelInfo, ToolCall
 from app.providers import LLMProvider
+from app.providers.thinking import ThinkTagParser
+
+
+def _extract_delta_parts(delta: dict[str, Any]) -> tuple[str | None, str | None]:
+    content_text: str | None = None
+    thinking_text: str | None = None
+
+    reasoning = delta.get("reasoning_content") or delta.get("reasoning")
+    if reasoning:
+        thinking_text = reasoning
+
+    raw_content = delta.get("content")
+    if raw_content is None:
+        pass
+    elif isinstance(raw_content, str):
+        if raw_content:
+            content_text = raw_content
+    elif isinstance(raw_content, list):
+        for part in raw_content:
+            if not isinstance(part, dict):
+                continue
+            part_type = part.get("type", "")
+            text = part.get("text", "")
+            if not text:
+                continue
+            if part_type in ("reasoning", "thinking"):
+                thinking_text = (thinking_text or "") + text
+            else:
+                content_text = (content_text or "") + text
+
+    return content_text, thinking_text
 
 
 class OpenAIProvider(LLMProvider):
@@ -50,7 +81,9 @@ class OpenAIProvider(LLMProvider):
 
         logger.debug(
             "[{}] OpenAI chat request: model={}, messages={}, tools={}",
-            self._provider_name, self._model, len(messages),
+            self._provider_name,
+            self._model,
+            len(messages),
             len(tools) if tools else 0,
         )
 
@@ -60,6 +93,7 @@ class OpenAIProvider(LLMProvider):
         thinking_parts: list[str] = []
         tool_calls_accum: dict[int, dict[str, Any]] = {}
         chunk_count = 0
+        think_parser = ThinkTagParser()
 
         with self._client.stream(
             "POST", url, headers=self._headers(), content=json.dumps(payload)
@@ -105,17 +139,23 @@ class OpenAIProvider(LLMProvider):
                     continue
                 delta = choices[0].get("delta", {})
 
-                if delta.get("content"):
-                    text = delta["content"]
-                    content_parts.append(text)
-                    if on_chunk:
-                        on_chunk("content", text)
+                content_text, thinking_text = _extract_delta_parts(delta)
 
-                reasoning = delta.get("reasoning_content") or delta.get("reasoning")
-                if reasoning:
-                    thinking_parts.append(reasoning)
+                if thinking_text:
+                    thinking_parts.append(thinking_text)
                     if on_chunk:
-                        on_chunk("thinking", reasoning)
+                        on_chunk("thinking", thinking_text)
+
+                if content_text:
+                    for chunk_type, text in think_parser.feed(content_text):
+                        if chunk_type == "thinking":
+                            thinking_parts.append(text)
+                            if on_chunk:
+                                on_chunk("thinking", text)
+                        else:
+                            content_parts.append(text)
+                            if on_chunk:
+                                on_chunk("content", text)
 
                 if delta.get("tool_calls"):
                     for tc_delta in delta["tool_calls"]:
@@ -135,13 +175,25 @@ class OpenAIProvider(LLMProvider):
                         if fn.get("arguments"):
                             acc["arguments"] += fn["arguments"]
 
+        for chunk_type, text in think_parser.flush():
+            if chunk_type == "thinking":
+                thinking_parts.append(text)
+                if on_chunk:
+                    on_chunk("thinking", text)
+            else:
+                content_parts.append(text)
+                if on_chunk:
+                    on_chunk("content", text)
+
         elapsed = time.perf_counter() - t0
         content = "".join(content_parts) or None
         thinking = "".join(thinking_parts) or None
 
         logger.debug(
             "[{}] OpenAI chat done: {:.2f}s, chunks={}, content_len={}, thinking_len={}, tool_calls={}",
-            self._provider_name, elapsed, chunk_count,
+            self._provider_name,
+            elapsed,
+            chunk_count,
             len(content) if content else 0,
             len(thinking) if thinking else 0,
             len(tool_calls_accum),
