@@ -10,13 +10,14 @@ import httpx
 from loguru import logger
 
 from app.models import LLMResponse, ModelInfo, ToolCall
+from app.providers import LLMProvider
 
 
-class OllamaProvider:
+class OllamaProvider(LLMProvider):
     def __init__(self, api_base_url: str, model: str = "") -> None:
         self._api_base_url = api_base_url.rstrip("/")
         self._model = model
-        self._client = httpx.Client(timeout=120.0)
+        self._client = httpx.Client(timeout=5.0)
 
     def chat(
         self,
@@ -40,8 +41,10 @@ class OllamaProvider:
         tool_calls_list: list[ToolCall] = []
 
         with self._client.stream(
-            "POST", url, headers={"Content-Type": "application/json"},
-            content=json.dumps(payload)
+            "POST",
+            url,
+            headers={"Content-Type": "application/json"},
+            content=json.dumps(payload),
         ) as response:
             if response.status_code != 200:
                 body = response.read().decode()
@@ -52,9 +55,7 @@ class OllamaProvider:
                     body[:200],
                     elapsed,
                 )
-                raise RuntimeError(
-                    f"Ollama API error: {response.status_code} - {body}"
-                )
+                raise RuntimeError(f"Ollama API error: {response.status_code} - {body}")
 
             for line in response.iter_lines():
                 if not line:
@@ -106,10 +107,7 @@ class OllamaProvider:
             resp.raise_for_status()
             data = resp.json()
             models = data.get("models", [])
-            return [
-                ModelInfo(id=m.get("name", ""), name=m.get("name"))
-                for m in models
-            ]
+            return [ModelInfo(id=m.get("name", ""), name=m.get("name")) for m in models]
         except Exception as e:
             logger.error("Failed to list models from {}: {}", url, e)
             return []

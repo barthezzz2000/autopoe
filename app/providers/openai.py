@@ -9,14 +9,15 @@ import httpx
 from loguru import logger
 
 from app.models import LLMResponse, ModelInfo, ToolCall
+from app.providers import LLMProvider
 
 
-class OpenAIProvider:
+class OpenAIProvider(LLMProvider):
     def __init__(self, api_base_url: str, api_key: str = "", model: str = "") -> None:
         self._api_base_url = api_base_url.rstrip("/")
         self._api_key = api_key
         self._model = model
-        self._client = httpx.Client(timeout=120.0)
+        self._client = httpx.Client(timeout=5.0)
 
     def _headers(self) -> dict[str, str]:
         headers: dict[str, str] = {"Content-Type": "application/json"}
@@ -58,9 +59,7 @@ class OpenAIProvider:
                     body[:200],
                     elapsed,
                 )
-                raise RuntimeError(
-                    f"OpenAI API error: {response.status_code} - {body}"
-                )
+                raise RuntimeError(f"OpenAI API error: {response.status_code} - {body}")
 
             for line in response.iter_lines():
                 if not line or line.startswith(":"):
@@ -130,7 +129,9 @@ class OpenAIProvider:
                 )
                 for _, acc in sorted(tool_calls_accum.items())
             ]
-            return LLMResponse(content=content, tool_calls=tool_calls, thinking=thinking)
+            return LLMResponse(
+                content=content, tool_calls=tool_calls, thinking=thinking
+            )
 
         return LLMResponse(content=content or "", thinking=thinking)
 
@@ -141,10 +142,7 @@ class OpenAIProvider:
             resp.raise_for_status()
             data = resp.json()
             models = data.get("data", [])
-            return [
-                ModelInfo(id=m["id"], name=m.get("name"))
-                for m in models
-            ]
+            return [ModelInfo(id=m["id"], name=m.get("name")) for m in models]
         except Exception as e:
             logger.error("Failed to list models from {}: {}", url, e)
             return []

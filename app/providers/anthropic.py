@@ -10,14 +10,15 @@ import httpx
 from loguru import logger
 
 from app.models import LLMResponse, ModelInfo, ToolCall
+from app.providers import LLMProvider
 
 
-class AnthropicProvider:
+class AnthropicProvider(LLMProvider):
     def __init__(self, api_base_url: str, api_key: str = "", model: str = "") -> None:
         self._api_base_url = api_base_url.rstrip("/")
         self._api_key = api_key
         self._model = model
-        self._client = httpx.Client(timeout=120.0)
+        self._client = httpx.Client(timeout=5.0)
 
     def _headers(self) -> dict[str, str]:
         return {
@@ -45,11 +46,13 @@ class AnthropicProvider:
         result = []
         for tool in tools:
             fn = tool.get("function", {})
-            result.append({
-                "name": fn.get("name", ""),
-                "description": fn.get("description", ""),
-                "input_schema": fn.get("parameters", {}),
-            })
+            result.append(
+                {
+                    "name": fn.get("name", ""),
+                    "description": fn.get("description", ""),
+                    "input_schema": fn.get("parameters", {}),
+                }
+            )
         return result
 
     def chat(
@@ -166,7 +169,9 @@ class AnthropicProvider:
                 tool_calls.append(
                     ToolCall(id=acc["id"], name=acc["name"], arguments=arguments)
                 )
-            return LLMResponse(content=content, tool_calls=tool_calls, thinking=thinking)
+            return LLMResponse(
+                content=content, tool_calls=tool_calls, thinking=thinking
+            )
 
         return LLMResponse(content=content or "", thinking=thinking)
 
@@ -177,10 +182,7 @@ class AnthropicProvider:
             resp.raise_for_status()
             data = resp.json()
             models = data.get("data", [])
-            return [
-                ModelInfo(id=m["id"], name=m.get("display_name"))
-                for m in models
-            ]
+            return [ModelInfo(id=m["id"], name=m.get("display_name")) for m in models]
         except Exception as e:
             logger.error("Failed to list models from {}: {}", url, e)
             return []

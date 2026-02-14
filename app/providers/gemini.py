@@ -10,14 +10,15 @@ import httpx
 from loguru import logger
 
 from app.models import LLMResponse, ModelInfo, ToolCall
+from app.providers import LLMProvider
 
 
-class GeminiProvider:
+class GeminiProvider(LLMProvider):
     def __init__(self, api_base_url: str, api_key: str = "", model: str = "") -> None:
         self._api_base_url = api_base_url.rstrip("/")
         self._api_key = api_key
         self._model = model
-        self._client = httpx.Client(timeout=120.0)
+        self._client = httpx.Client(timeout=5.0)
 
     def _convert_messages(
         self, messages: list[dict[str, Any]]
@@ -31,16 +32,16 @@ class GeminiProvider:
                 system_parts.append(msg["content"])
             else:
                 gemini_role = "model" if role == "assistant" else "user"
-                contents.append({
-                    "role": gemini_role,
-                    "parts": [{"text": msg["content"]}],
-                })
+                contents.append(
+                    {
+                        "role": gemini_role,
+                        "parts": [{"text": msg["content"]}],
+                    }
+                )
 
         system_instruction = None
         if system_parts:
-            system_instruction = {
-                "parts": [{"text": "\n\n".join(system_parts)}]
-            }
+            system_instruction = {"parts": [{"text": "\n\n".join(system_parts)}]}
 
         return system_instruction, contents
 
@@ -83,8 +84,10 @@ class GeminiProvider:
         tool_calls_list: list[ToolCall] = []
 
         with self._client.stream(
-            "POST", url, headers={"Content-Type": "application/json"},
-            content=json.dumps(payload)
+            "POST",
+            url,
+            headers={"Content-Type": "application/json"},
+            content=json.dumps(payload),
         ) as response:
             if response.status_code != 200:
                 body = response.read().decode()
@@ -95,9 +98,7 @@ class GeminiProvider:
                     body[:200],
                     elapsed,
                 )
-                raise RuntimeError(
-                    f"Gemini API error: {response.status_code} - {body}"
-                )
+                raise RuntimeError(f"Gemini API error: {response.status_code} - {body}")
 
             for line in response.iter_lines():
                 if not line or line.startswith(":"):
