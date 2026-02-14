@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import asdict
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from loguru import logger
 from pydantic import BaseModel
 
@@ -22,24 +22,19 @@ router = APIRouter()
 STEWARD_ID: str | None = None
 
 
-class ChatRequest(BaseModel):
+class AgentMessageRequest(BaseModel):
     message: str
 
 
-@router.post("/api/chat")
-async def chat(req: ChatRequest) -> dict:
-    logger.info("POST /api/chat message={}", req.message[:100])
+@router.post("/api/agents/{agent_id}/message")
+async def send_agent_message(agent_id: str, req: AgentMessageRequest) -> dict:
+    agent = registry.get(agent_id)
+    if agent is None:
+        raise HTTPException(status_code=404, detail="Agent not found")
 
-    if STEWARD_ID is None:
-        return {"error": "Steward not initialized"}
-
-    steward = registry.get(STEWARD_ID)
-    if steward is None:
-        return {"error": "Steward not found"}
-
-    msg = Message(from_id="human", to_id=STEWARD_ID, content=req.message)
-    steward.enqueue_message(msg)
-    return {"status": "sent", "steward_id": STEWARD_ID}
+    msg = Message(from_id="human", to_id=agent_id, content=req.message)
+    agent.enqueue_message(msg)
+    return {"status": "sent"}
 
 
 @router.websocket("/ws/events")
@@ -94,7 +89,7 @@ async def list_agents() -> dict:
 async def get_agent(agent_id: str) -> dict:
     agent = registry.get(agent_id)
     if agent is None:
-        return {"error": "Agent not found"}
+        raise HTTPException(status_code=404, detail="Agent not found")
 
     children = [
         {
@@ -123,21 +118,6 @@ async def get_agent(agent_id: str) -> dict:
     }
 
 
-class AgentMessageRequest(BaseModel):
-    message: str
-
-
-@router.post("/api/agents/{agent_id}/message")
-async def send_agent_message(agent_id: str, req: AgentMessageRequest) -> dict:
-    agent = registry.get(agent_id)
-    if agent is None:
-        return {"error": "Agent not found"}
-
-    msg = Message(from_id="human", to_id=agent_id, content=req.message)
-    agent.enqueue_message(msg)
-    return {"status": "sent"}
-
-
 class PathAccessResponse(BaseModel):
     approved: bool
 
@@ -148,7 +128,7 @@ async def resolve_path_access(request_id: str, req: PathAccessResponse) -> dict:
 
     success = _resolve(request_id, req.approved)
     if not success:
-        return {"error": "Request not found or already resolved"}
+        raise HTTPException(status_code=404, detail="Request not found or already resolved")
     return {"status": "resolved", "approved": req.approved}
 
 
@@ -156,7 +136,7 @@ async def resolve_path_access(request_id: str, req: PathAccessResponse) -> dict:
 async def terminate_agent(agent_id: str) -> dict:
     agent = registry.get(agent_id)
     if agent is None:
-        return {"error": "Agent not found"}
+        raise HTTPException(status_code=404, detail="Agent not found")
     agent.request_termination("user_requested")
     return {"status": "terminating"}
 
@@ -222,21 +202,25 @@ async def update_settings(req: UpdateSettingsRequest) -> dict:
 
 class ListModelsRequest(BaseModel):
     provider_name: str
-    provider_type: str
-    api_base_url: str
-    api_key: str = ""
 
 
 @router.post("/api/providers/models")
 async def list_provider_models(req: ListModelsRequest) -> dict:
     from app.providers.registry import create_provider, ProviderType
+    from app.user_settings import find_provider, get_user_settings
+
+    settings = get_user_settings()
+    cfg = find_provider(settings.model, req.provider_name)
+
+    if cfg is None:
+        raise HTTPException(status_code=404, detail=f"Provider '{req.provider_name}' not found")
 
     try:
         provider = create_provider(
-            provider_name=req.provider_name,
-            provider_type=ProviderType(req.provider_type),
-            api_base_url=req.api_base_url,
-            api_key=req.api_key,
+            provider_name=cfg.name,
+            provider_type=ProviderType(cfg.provider_type),
+            api_base_url=cfg.api_base_url,
+            api_key=cfg.api_key,
         )
         models = provider.list_models()
         return {
@@ -246,5 +230,5 @@ async def list_provider_models(req: ListModelsRequest) -> dict:
             ]
         }
     except Exception as e:
-        logger.error("Failed to list models: {}", e)
-        return {"error": str(e), "models": []}
+        logger.error("Failed to list models for provider '{}': {}", req.provider_name, e)
+        raise HTTPException(status_code=500, detail=str(e))

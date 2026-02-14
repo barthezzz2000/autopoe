@@ -251,6 +251,11 @@ export function AgentProvider({ children }: { children: ReactNode }) {
 
   const sendMessage = useCallback(
     (content: string) => {
+      if (!stewardId) {
+        toast.error("Steward not available");
+        return;
+      }
+
       const msg: ChatMessage = {
         id: `h-${Date.now()}-${Math.random()}`,
         from: "human",
@@ -259,7 +264,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       };
       setMessages((prev) => [...prev, msg]);
 
-      fetch("/api/chat", {
+      fetch(`/api/agents/${stewardId}/message`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: content }),
@@ -267,7 +272,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
         toast.error("Failed to send message");
       });
     },
-    [],
+    [stewardId],
   );
 
   const selectAgent = useCallback((id: string | null) => {

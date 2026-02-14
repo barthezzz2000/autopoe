@@ -569,9 +569,6 @@ function ModelSettings({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         provider_name: activeProvider.name,
-        provider_type: activeProvider.provider_type,
-        api_base_url: activeProvider.api_base_url,
-        api_key: activeProvider.api_key,
       }),
     })
       .then((res) => res.json())
