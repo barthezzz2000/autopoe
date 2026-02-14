@@ -82,12 +82,19 @@ class AnthropicProvider(LLMProvider):
         if tools:
             payload["tools"] = self._convert_tools(tools)
 
+        logger.debug(
+            "[{}] Anthropic chat request: model={}, messages={}, tools={}",
+            self._provider_name, self._model, len(converted_messages),
+            len(tools) if tools else 0,
+        )
+
         t0 = time.perf_counter()
 
         content_parts: list[str] = []
         thinking_parts: list[str] = []
         tool_calls_accum: dict[int, dict[str, Any]] = {}
         current_block_idx = -1
+        event_count = 0
 
         with self._client.stream(
             "POST", url, headers=self._headers(), content=json.dumps(payload)
@@ -125,6 +132,7 @@ class AnthropicProvider(LLMProvider):
                 except json.JSONDecodeError:
                     continue
 
+                event_count += 1
                 event_type = event.get("type", "")
 
                 if event_type == "content_block_start":
@@ -163,8 +171,17 @@ class AnthropicProvider(LLMProvider):
                 elif event_type == "message_stop":
                     break
 
+        elapsed = time.perf_counter() - t0
         content = "".join(content_parts) or None
         thinking = "".join(thinking_parts) or None
+
+        logger.debug(
+            "[{}] Anthropic chat done: {:.2f}s, events={}, content_len={}, thinking_len={}, tool_calls={}",
+            self._provider_name, elapsed, event_count,
+            len(content) if content else 0,
+            len(thinking) if thinking else 0,
+            len(tool_calls_accum),
+        )
 
         if tool_calls_accum:
             tool_calls = []

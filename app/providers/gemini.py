@@ -85,10 +85,17 @@ class GeminiProvider(LLMProvider):
         if tools:
             payload["tools"] = self._convert_tools(tools)
 
+        logger.debug(
+            "[{}] Gemini chat request: model={}, messages={}, tools={}",
+            self._provider_name, self._model, len(contents),
+            len(tools) if tools else 0,
+        )
+
         t0 = time.perf_counter()
 
         content_parts: list[str] = []
         tool_calls_list: list[ToolCall] = []
+        chunk_count = 0
 
         with self._client.stream(
             "POST",
@@ -129,6 +136,7 @@ class GeminiProvider(LLMProvider):
                 except json.JSONDecodeError:
                     continue
 
+                chunk_count += 1
                 candidates = chunk.get("candidates", [])
                 if not candidates:
                     continue
@@ -150,7 +158,15 @@ class GeminiProvider(LLMProvider):
                             )
                         )
 
+        elapsed = time.perf_counter() - t0
         content = "".join(content_parts) or None
+
+        logger.debug(
+            "[{}] Gemini chat done: {:.2f}s, chunks={}, content_len={}, tool_calls={}",
+            self._provider_name, elapsed, chunk_count,
+            len(content) if content else 0,
+            len(tool_calls_list),
+        )
 
         if tool_calls_list:
             return LLMResponse(content=content, tool_calls=tool_calls_list)

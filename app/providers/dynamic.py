@@ -3,6 +3,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
+from loguru import logger
+
 from app.models import LLMResponse, ModelInfo
 from app.providers import LLMProvider
 from app.providers.registry import ProviderType
@@ -38,6 +40,11 @@ class DynamicProvider(LLMProvider):
 
         if self._cached_key == key and self._cached_provider is not None:
             return self._cached_provider
+
+        logger.debug(
+            "DynamicProvider resolved: provider={}, type={}, model={}, base_url={}",
+            provider_name, provider_type, model, api_base_url,
+        )
 
         provider = create_provider(
             provider_name=provider_name,

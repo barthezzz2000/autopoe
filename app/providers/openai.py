@@ -48,11 +48,18 @@ class OpenAIProvider(LLMProvider):
             payload["tools"] = tools
             payload["tool_choice"] = "auto"
 
+        logger.debug(
+            "[{}] OpenAI chat request: model={}, messages={}, tools={}",
+            self._provider_name, self._model, len(messages),
+            len(tools) if tools else 0,
+        )
+
         t0 = time.perf_counter()
 
         content_parts: list[str] = []
         thinking_parts: list[str] = []
         tool_calls_accum: dict[int, dict[str, Any]] = {}
+        chunk_count = 0
 
         with self._client.stream(
             "POST", url, headers=self._headers(), content=json.dumps(payload)
@@ -92,6 +99,7 @@ class OpenAIProvider(LLMProvider):
                 except json.JSONDecodeError:
                     continue
 
+                chunk_count += 1
                 choices = chunk.get("choices")
                 if not choices:
                     continue
@@ -127,8 +135,17 @@ class OpenAIProvider(LLMProvider):
                         if fn.get("arguments"):
                             acc["arguments"] += fn["arguments"]
 
+        elapsed = time.perf_counter() - t0
         content = "".join(content_parts) or None
         thinking = "".join(thinking_parts) or None
+
+        logger.debug(
+            "[{}] OpenAI chat done: {:.2f}s, chunks={}, content_len={}, thinking_len={}, tool_calls={}",
+            self._provider_name, elapsed, chunk_count,
+            len(content) if content else 0,
+            len(thinking) if thinking else 0,
+            len(tool_calls_accum),
+        )
 
         if tool_calls_accum:
             tool_calls = [

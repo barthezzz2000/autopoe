@@ -41,10 +41,17 @@ class OllamaProvider(LLMProvider):
         if tools:
             payload["tools"] = tools
 
+        logger.debug(
+            "[{}] Ollama chat request: model={}, messages={}, tools={}",
+            self._provider_name, self._model, len(messages),
+            len(tools) if tools else 0,
+        )
+
         t0 = time.perf_counter()
 
         content_parts: list[str] = []
         tool_calls_list: list[ToolCall] = []
+        chunk_count = 0
 
         with self._client.stream(
             "POST",
@@ -82,6 +89,7 @@ class OllamaProvider(LLMProvider):
                 except json.JSONDecodeError:
                     continue
 
+                chunk_count += 1
                 message = chunk.get("message", {})
                 text = message.get("content", "")
                 if text:
@@ -102,7 +110,15 @@ class OllamaProvider(LLMProvider):
                 if chunk.get("done", False):
                     break
 
+        elapsed = time.perf_counter() - t0
         content = "".join(content_parts) or None
+
+        logger.debug(
+            "[{}] Ollama chat done: {:.2f}s, chunks={}, content_len={}, tool_calls={}",
+            self._provider_name, elapsed, chunk_count,
+            len(content) if content else 0,
+            len(tool_calls_list),
+        )
 
         if tool_calls_list:
             return LLMResponse(content=content, tool_calls=tool_calls_list)
