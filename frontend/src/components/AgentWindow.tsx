@@ -81,27 +81,11 @@ export function AgentWindow({ agentId, windowState, zoom }: AgentWindowProps) {
           toolName: e.tool_name ?? "unknown",
           toolCallId: e.tool_call_id,
           args: e.arguments,
-          result: null,
+          result: e.content,
+          resultStreaming: e.streaming,
         });
       } else if (e.type === "error" && e.content) {
         items.push({ kind: "error", content: e.content });
-      } else if (e.type === "tool_result" && e.content != null) {
-        for (let j = items.length - 1; j >= 0; j--) {
-          const prev = items[j];
-          if (prev.kind === "tool_use" && prev.toolCallId === e.tool_call_id && prev.result === null) {
-            items[j] = { ...prev, result: e.content, resultStreaming: e.streaming };
-            break;
-          }
-        }
-        if (e.tool_call_id === null) {
-          for (let j = items.length - 1; j >= 0; j--) {
-            const prev = items[j];
-            if (prev.kind === "tool_use" && prev.result === null) {
-              items[j] = { ...prev, result: e.content, resultStreaming: e.streaming };
-              break;
-            }
-          }
-        }
       }
     }
     return items;
@@ -406,7 +390,7 @@ function ToolUseBlock({ item }: { item: Extract<ChatItem, { kind: "tool_use" }> 
         <Badge variant="outline" className="text-[10px] bg-zinc-700/50 border-zinc-600 text-zinc-300 px-1.5 py-0">
           {item.toolName}
         </Badge>
-        {item.result !== null ? (
+        {item.result !== null && !item.resultStreaming ? (
           <span className="text-emerald-400/70 text-[10px]">done</span>
         ) : item.resultStreaming ? (
           <span className="text-blue-400/70 text-[10px] animate-pulse">running</span>

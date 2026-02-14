@@ -10,7 +10,7 @@ import {
 import { toast } from "sonner";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { useAgents } from "@/hooks/useAgents";
-import type { Agent, AgentEvent, ChatMessage, HistoryEntry, PathAccessRequest } from "@/types";
+import type { Agent, AgentEvent, ChatMessage, HistoryEntry, PathAccessRequest, StreamingDelta } from "@/types";
 
 export interface WindowState {
   x: number;
@@ -47,17 +47,11 @@ interface AgentContextValue {
   setHoveredAgentId: (id: string | null) => void;
   agentHistories: Map<string, HistoryEntry[]>;
   clearAgentHistory: (agentId: string) => void;
-  streamingBuffers: Map<string, StreamingBuffer>;
+  streamingDeltas: Map<string, StreamingDelta[]>;
   activeMessages: ActiveMessage[];
   activeToolCalls: Map<string, string>;
   eventPanelVisible: boolean;
   toggleEventPanel: () => void;
-}
-
-export interface StreamingBuffer {
-  content: string;
-  thinking: string;
-  toolResults: Map<string, string>;
 }
 
 const AgentContext = createContext<AgentContextValue | null>(null);
@@ -79,7 +73,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   const [agentHistories, setAgentHistories] = useState<Map<string, HistoryEntry[]>>(
     () => new Map(),
   );
-  const [streamingBuffers, setStreamingBuffers] = useState<Map<string, StreamingBuffer>>(
+  const [streamingDeltas, setStreamingDeltas] = useState<Map<string, StreamingDelta[]>>(
     () => new Map(),
   );
   const [activeMessages, setActiveMessages] = useState<ActiveMessage[]>([]);
@@ -199,26 +193,11 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       }
 
       if (event.type === "history_entry_delta") {
-        const deltaType = event.data.delta_type as string;
-        const delta = event.data.delta as string;
-        const toolCallId = event.data.tool_call_id as string | undefined;
-
-        setStreamingBuffers((prev) => {
+        const delta = event.data as unknown as StreamingDelta;
+        setStreamingDeltas((prev) => {
           const next = new Map(prev);
-          const buf = next.get(event.agent_id) ?? {
-            content: "",
-            thinking: "",
-            toolResults: new Map(),
-          };
-          if (deltaType === "content") {
-            next.set(event.agent_id, { ...buf, content: buf.content + delta });
-          } else if (deltaType === "thinking") {
-            next.set(event.agent_id, { ...buf, thinking: buf.thinking + delta });
-          } else if (deltaType === "tool_result" && toolCallId) {
-            const newResults = new Map(buf.toolResults);
-            newResults.set(toolCallId, (newResults.get(toolCallId) ?? "") + delta);
-            next.set(event.agent_id, { ...buf, toolResults: newResults });
-          }
+          const list = next.get(event.agent_id) ?? [];
+          next.set(event.agent_id, [...list, delta]);
           return next;
         });
       }
@@ -227,21 +206,34 @@ export function AgentProvider({ children }: { children: ReactNode }) {
         const entry = event.data as unknown as HistoryEntry;
 
         if (entry.type === "assistant_text" || entry.type === "assistant_thinking") {
-          setStreamingBuffers((prev) => {
-            const buf = prev.get(event.agent_id);
-            if (!buf) return prev;
+          setStreamingDeltas((prev) => {
+            const list = prev.get(event.agent_id);
+            if (!list || list.length === 0) return prev;
             const next = new Map(prev);
-            next.set(event.agent_id, { ...buf, content: "", thinking: "" });
+            const filtered = list.filter(
+              (d) => d.type !== "content" && d.type !== "thinking",
+            );
+            if (filtered.length === 0) {
+              next.delete(event.agent_id);
+            } else {
+              next.set(event.agent_id, filtered);
+            }
             return next;
           });
-        } else if (entry.type === "tool_call" && entry.tool_call_id) {
-          setStreamingBuffers((prev) => {
-            const buf = prev.get(event.agent_id);
-            if (!buf) return prev;
+        } else if (entry.type === "tool_call" && entry.tool_call_id && !entry.streaming) {
+          setStreamingDeltas((prev) => {
+            const list = prev.get(event.agent_id);
+            if (!list || list.length === 0) return prev;
             const next = new Map(prev);
-            const newResults = new Map(buf.toolResults);
-            newResults.delete(entry.tool_call_id!);
-            next.set(event.agent_id, { ...buf, toolResults: newResults });
+            const filtered = list.filter(
+              (d) =>
+                !(d.type === "tool_result" && d.tool_call_id === entry.tool_call_id),
+            );
+            if (filtered.length === 0) {
+              next.delete(event.agent_id);
+            } else {
+              next.set(event.agent_id, filtered);
+            }
             return next;
           });
         }
@@ -377,7 +369,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       setHoveredAgentId,
       agentHistories,
       clearAgentHistory,
-      streamingBuffers,
+      streamingDeltas,
       activeMessages,
       activeToolCalls,
       pendingPathAccess,
@@ -403,7 +395,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       hoveredAgentId,
       agentHistories,
       clearAgentHistory,
-      streamingBuffers,
+      streamingDeltas,
       activeMessages,
       activeToolCalls,
       pendingPathAccess,

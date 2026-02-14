@@ -1,12 +1,37 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAgent } from "@/context/AgentContext";
-import type { AgentDetail, HistoryEntry } from "@/types";
+import type { AgentDetail, HistoryEntry, StreamingDelta } from "@/types";
+
+function reduceDeltas(deltas: StreamingDelta[]) {
+  let content = "";
+  let thinking = "";
+  const toolResults = new Map<string, string>();
+
+  for (const d of deltas) {
+    switch (d.type) {
+      case "content":
+        content += d.text;
+        break;
+      case "thinking":
+        thinking += d.text;
+        break;
+      case "tool_result":
+        toolResults.set(
+          d.tool_call_id,
+          (toolResults.get(d.tool_call_id) ?? "") + d.text,
+        );
+        break;
+    }
+  }
+
+  return { content, thinking, toolResults };
+}
 
 export function useAgentDetail(agentId: string | null) {
   const [detail, setDetail] = useState<AgentDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [fetchedAt, setFetchedAt] = useState(0);
-  const { agentHistories, clearAgentHistory, streamingBuffers, agents } = useAgent();
+  const { agentHistories, clearAgentHistory, streamingDeltas, agents } = useAgent();
 
   useEffect(() => {
     if (!agentId) {
@@ -48,13 +73,15 @@ export function useAgentDetail(agentId: string | null) {
       ? [...detail.history, ...incremental]
       : [...detail.history];
 
-    const buf = agentId ? streamingBuffers.get(agentId) : undefined;
-    if (buf) {
+    const deltas = agentId ? streamingDeltas.get(agentId) : undefined;
+    if (deltas && deltas.length > 0) {
+      const { content, thinking, toolResults } = reduceDeltas(deltas);
       const now = Date.now() / 1000;
-      if (buf.thinking) {
+
+      if (thinking) {
         base.push({
           type: "assistant_thinking",
-          content: buf.thinking,
+          content: thinking,
           from_id: null,
           to_id: null,
           tool_name: null,
@@ -64,10 +91,10 @@ export function useAgentDetail(agentId: string | null) {
           streaming: true,
         } satisfies HistoryEntry);
       }
-      if (buf.content) {
+      if (content) {
         base.push({
           type: "assistant_text",
-          content: buf.content,
+          content,
           from_id: null,
           to_id: null,
           tool_name: null,
@@ -77,11 +104,15 @@ export function useAgentDetail(agentId: string | null) {
           streaming: true,
         } satisfies HistoryEntry);
       }
-      if (buf.toolResults.size > 0) {
-        for (const [toolCallId, resultText] of buf.toolResults) {
+      if (toolResults.size > 0) {
+        for (const [toolCallId, resultText] of toolResults) {
           for (let i = base.length - 1; i >= 0; i--) {
             const entry = base[i];
-            if (entry.type === "tool_call" && entry.tool_call_id === toolCallId && entry.streaming) {
+            if (
+              entry.type === "tool_call" &&
+              entry.tool_call_id === toolCallId &&
+              entry.streaming
+            ) {
               base[i] = { ...entry, content: resultText };
               break;
             }
@@ -97,7 +128,7 @@ export function useAgentDetail(agentId: string | null) {
       merged.status_description = liveAgent.status_description;
     }
     return merged;
-  }, [detail, agentId, agentHistories, streamingBuffers, agents]);
+  }, [detail, agentId, agentHistories, streamingDeltas, agents]);
 
   return { detail: merged, loading, fetchedAt };
 }

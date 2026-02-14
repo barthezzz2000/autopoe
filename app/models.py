@@ -3,7 +3,7 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import Any
+from typing import Any, Literal, Union
 
 
 class Role(StrEnum):
@@ -43,6 +43,28 @@ class HistoryEntry:
     arguments: dict[str, Any] | None = None
     streaming: bool = False
     timestamp: float = field(default_factory=time.time)
+
+
+@dataclass
+class ContentDelta:
+    type: Literal["content"] = "content"
+    text: str = ""
+
+
+@dataclass
+class ThinkingDelta:
+    type: Literal["thinking"] = "thinking"
+    text: str = ""
+
+
+@dataclass
+class ToolResultDelta:
+    type: Literal["tool_result"] = "tool_result"
+    tool_call_id: str = ""
+    text: str = ""
+
+
+StreamingDelta = Union[ContentDelta, ThinkingDelta, ToolResultDelta]
 
 
 @dataclass

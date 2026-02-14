@@ -13,11 +13,14 @@ from app.events import event_bus
 from app.models import (
     AgentConfig,
     AgentState,
+    ContentDelta,
     Event,
     EventType,
     HistoryEntry,
     HistoryType,
     Message,
+    ThinkingDelta,
+    ToolResultDelta,
 )
 from app.prompts import get_system_prompt
 from app.providers import LLMProvider
@@ -97,10 +100,17 @@ class Agent:
                 messages = self._build_messages()
 
                 def _on_llm_chunk(chunk_type: str, text: str) -> None:
+                    if chunk_type == "content":
+                        delta = ContentDelta(text=text)
+                    elif chunk_type == "thinking":
+                        delta = ThinkingDelta(text=text)
+                    else:
+                        return
+
                     event_bus.emit(Event(
                         type=EventType.HISTORY_ENTRY_DELTA,
                         agent_id=self.uuid,
-                        data={"delta_type": chunk_type, "delta": text},
+                        data=asdict(delta),
                     ))
 
                 response = self.provider.chat(
@@ -318,10 +328,11 @@ class Agent:
         )
 
         def _on_tool_output(text: str) -> None:
+            delta = ToolResultDelta(tool_call_id=call_id, text=text)
             event_bus.emit(Event(
                 type=EventType.HISTORY_ENTRY_DELTA,
                 agent_id=self.uuid,
-                data={"delta_type": "tool_result", "tool_call_id": call_id, "delta": text},
+                data=asdict(delta),
             ))
 
         try:

@@ -92,3 +92,8 @@ export interface PathAccessRequest {
   path: string;
   reason: string;
 }
+
+export type StreamingDelta =
+  | { type: "content"; text: string }
+  | { type: "thinking"; text: string }
+  | { type: "tool_result"; tool_call_id: string; text: string };
