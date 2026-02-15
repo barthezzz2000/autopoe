@@ -1,18 +1,24 @@
 repos:
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.1
-    hooks:
-      - id: ruff-check
-        args: [--fix]
-      - id: ruff-format
-
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.19.1
-    hooks:
-      - id: mypy
-
   - repo: local
     hooks:
+      - id: ruff-check
+        name: Ruff Check
+        entry: uv run ruff check --fix
+        language: system
+        types: [python]
+
+      - id: ruff-format
+        name: Ruff Format
+        entry: uv run ruff format
+        language: system
+        types: [python]
+
+      - id: mypy
+        name: Mypy
+        entry: uv run mypy
+        language: system
+        types: [python]
+
       - id: frontend-format
         name: Frontend Format (Prettier)
         entry: bash -c 'cd frontend && pnpm format'

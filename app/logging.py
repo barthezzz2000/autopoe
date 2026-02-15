@@ -3,12 +3,12 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from loguru import logger
+from loguru import Record, logger
 
 from app.settings import Settings
 
 
-def _stderr_format(record: dict) -> str:
+def _stderr_format(record: Record) -> str:
     agent_id = record["extra"].get("agent_id", "")
     role = record["extra"].get("role", "")
     agent_part = f" | agent:{agent_id} | {role}" if agent_id else ""
