@@ -11,3 +11,8 @@ __pycache__/
 worktrees/
 logs/
 settings.json
+
+dist/
+build/
+
+app/static/

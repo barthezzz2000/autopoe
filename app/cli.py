@@ -1,0 +1,46 @@
+from __future__ import annotations
+
+import argparse
+import sys
+
+
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(
+        prog="synode",
+        description="Synode — multi-agent collaboration framework",
+    )
+    parser.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help="Bind host (default: 127.0.0.1)",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=8000,
+        help="Bind port (default: 8000)",
+    )
+    parser.add_argument(
+        "--version",
+        action="store_true",
+        help="Show version and exit",
+    )
+    args = parser.parse_args(argv)
+
+    if args.version:
+        from app._version import __version__
+
+        print(f"synode {__version__}")
+        sys.exit(0)
+
+    import uvicorn
+
+    uvicorn.run(
+        "app.main:app",
+        host=args.host,
+        port=args.port,
+    )
+
+
+if __name__ == "__main__":
+    main()
