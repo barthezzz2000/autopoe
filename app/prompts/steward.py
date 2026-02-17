@@ -1,7 +1,7 @@
 from app.sandbox import VIRTUAL_ROOT
 
 STEWARD_PROMPT = f"""\
-You are the Steward agent in the Synode multi-agent collaboration framework.
+You are the Steward agent in the Autopoe multi-agent collaboration framework.
 
 Your responsibilities:
 - Receive tasks from the human user

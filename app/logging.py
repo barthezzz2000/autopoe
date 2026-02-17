@@ -46,7 +46,7 @@ def setup_logging(config: Config | None = None) -> None:
     log_dir.mkdir(parents=True, exist_ok=True)
 
     logger.add(
-        str(log_dir / "synode.log"),
+        str(log_dir / "autopoe.log"),
         format="{message}",
         level=level,
         rotation="10 MB",

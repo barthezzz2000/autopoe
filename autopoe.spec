@@ -28,7 +28,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name="synode",
+    name="autopoe",
     debug=False,
     strip=True,
     upx=False,

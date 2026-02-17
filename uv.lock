@@ -1069,7 +1069,7 @@ wheels = [
 ]
 
 [[package]]
-name = "synode"
+name = "autopoe"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi", extra = ["standard"] },

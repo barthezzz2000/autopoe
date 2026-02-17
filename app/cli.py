@@ -6,8 +6,8 @@ import sys
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
-        prog="synode",
-        description="Synode — multi-agent collaboration framework",
+        prog="autopoe",
+        description="Autopoe — multi-agent collaboration framework",
     )
     parser.add_argument(
         "--host",
@@ -30,7 +30,7 @@ def main(argv: list[str] | None = None) -> None:
     if args.version:
         from app._version import __version__
 
-        print(f"synode {__version__}")
+        print(f"autopoe {__version__}")
         sys.exit(0)
 
     import uvicorn

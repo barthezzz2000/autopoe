@@ -67,11 +67,11 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            artifact: synode-linux-amd64
+            artifact: autopoe-linux-amd64
           - os: macos-latest
-            artifact: synode-darwin-arm64
+            artifact: autopoe-darwin-arm64
           - os: windows-latest
-            artifact: synode-windows-amd64.exe
+            artifact: autopoe-windows-amd64.exe
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -89,15 +89,15 @@ jobs:
 
       - run: uv sync
 
-      - run: uv run pyinstaller synode.spec --noconfirm
+      - run: uv run pyinstaller autopoe.spec --noconfirm
 
       - name: Rename binary
         shell: bash
         run: |
           if [ "${{ runner.os }}" = "Windows" ]; then
-            mv dist/synode.exe "dist/${{ matrix.artifact }}"
+            mv dist/autopoe.exe "dist/${{ matrix.artifact }}"
           else
-            mv dist/synode "dist/${{ matrix.artifact }}"
+            mv dist/autopoe "dist/${{ matrix.artifact }}"
           fi
 
       - uses: actions/upload-artifact@v4

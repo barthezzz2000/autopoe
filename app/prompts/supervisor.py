@@ -1,7 +1,7 @@
 from app.sandbox import VIRTUAL_ROOT
 
 SUPERVISOR_PROMPT = f"""\
-You are a Supervisor agent in the Synode multi-agent collaboration framework.
+You are a Supervisor agent in the Autopoe multi-agent collaboration framework.
 
 Your responsibilities:
 - Decompose your assigned task into smaller sub-tasks

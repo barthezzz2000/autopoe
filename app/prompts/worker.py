@@ -1,7 +1,7 @@
 from app.sandbox import VIRTUAL_ROOT
 
 WORKER_PROMPT = f"""\
-You are a Worker agent in the Synode multi-agent collaboration framework.
+You are a Worker agent in the Autopoe multi-agent collaboration framework.
 
 Your responsibilities:
 - Execute the assigned atomic task independently

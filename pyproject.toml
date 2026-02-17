@@ -1,5 +1,5 @@
 [project]
-name = "synode"
+name = "autopoe"
 authors = [{ name = "ImFeH2", email = "i@feh2.im" }]
 dynamic = ["version"]
 license = "Apache-2.0"
@@ -16,7 +16,7 @@ dependencies = [
 ]
 
 [project.scripts]
-synode = "app.cli:main"
+autopoe = "app.cli:main"
 
 [build-system]
 requires = ["hatchling"]
