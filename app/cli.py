@@ -28,9 +28,14 @@ def main(argv: list[str] | None = None) -> None:
     args = parser.parse_args(argv)
 
     if args.version:
-        from app._version import __version__
+        try:
+            from importlib.metadata import version
 
-        print(f"autopoe {__version__}")
+            ver = version("autopoe")
+        except Exception:
+            from app._version import __version__ as ver
+
+        print(f"autopoe {ver}")
         sys.exit(0)
 
     import uvicorn

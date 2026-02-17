@@ -19,11 +19,14 @@ dependencies = [
 autopoe = "app.cli:main"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [tool.hatch.version]
-path = "app/_version.py"
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "app/_version.py"
 
 [tool.hatch.build.targets.sdist]
 exclude = [
