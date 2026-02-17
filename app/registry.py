@@ -33,6 +33,13 @@ class AgentRegistry:
         with self._lock:
             return self._agents.get(agent_id)
 
+    def find_by_name(self, name: str) -> Agent | None:
+        with self._lock:
+            matches = [a for a in self._agents.values() if a.config.name == name]
+            if len(matches) == 1:
+                return matches[0]
+            return None
+
     def get_children(self, supervisor_id: str) -> list[Agent]:
         with self._lock:
             return [
@@ -44,6 +51,12 @@ class AgentRegistry:
     def get_all(self) -> list[Agent]:
         with self._lock:
             return list(self._agents.values())
+
+    def get_stewards(self) -> list[Agent]:
+        from app.models import Role
+
+        with self._lock:
+            return [a for a in self._agents.values() if a.config.role == Role.STEWARD]
 
     def reset(self) -> None:
         with self._lock:

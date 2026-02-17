@@ -5,7 +5,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AgentProvider, useAgent } from "@/context/AgentContext";
 import { AgentTree } from "@/components/AgentTree";
 import { EventLog } from "@/components/EventLog";
-import { PathAccessDialog } from "@/components/PathAccessDialog";
 import { Sidebar } from "@/components/Sidebar";
 import { SettingsDialog } from "@/components/SettingsDialog";
 
@@ -26,7 +25,6 @@ function AppContent() {
         </div>
         <EventLog />
       </div>
-      <PathAccessDialog />
       <SettingsDialog
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}

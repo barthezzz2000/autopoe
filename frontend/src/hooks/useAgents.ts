@@ -31,7 +31,6 @@ export function useAgents() {
     if (event.type === "agent_created") {
       const data = event.data as unknown as {
         role: Agent["role"];
-        branch?: string;
         name?: string | null;
       };
       setAgents((prev) => {
@@ -40,10 +39,9 @@ export function useAgents() {
           id: event.agent_id,
           role: data.role,
           state: "initializing",
-          branch: data.branch ?? null,
           children: [],
           name: data.name ?? null,
-          status_description: "",
+          todos: [],
         });
         const parentId = event.data.parent_id as string | undefined;
         if (parentId && next.has(parentId)) {
@@ -60,12 +58,11 @@ export function useAgents() {
         const agent = prev.get(event.agent_id);
         if (!agent) return prev;
         const next = new Map(prev);
+        const todos = event.data.todos as Agent["todos"] | undefined;
         next.set(event.agent_id, {
           ...agent,
           state: event.data.new_state as Agent["state"],
-          status_description:
-            (event.data.status_description as string) ??
-            agent.status_description,
+          todos: todos ?? agent.todos,
         });
         return next;
       });

@@ -94,30 +94,30 @@ export function AgentWindow({ agentId, windowState, zoom }: AgentWindowProps) {
     if (!detail) return [];
     const items: ChatItem[] = [];
     for (const e of detail.history) {
-      if (e.type === "received_message" && e.content && e.from_id === "human") {
+      if (e.type === "ReceivedMessage" && e.content && e.from_id === "human") {
         items.push({ kind: "user", content: e.content });
-      } else if (e.type === "assistant_text" && e.content) {
+      } else if (e.type === "AssistantText" && e.content) {
         items.push({
           kind: "assistant",
           content: e.content,
           streaming: e.streaming,
         });
-      } else if (e.type === "assistant_thinking" && e.content) {
+      } else if (e.type === "AssistantThinking" && e.content) {
         items.push({
           kind: "thinking",
           content: e.content,
           streaming: e.streaming,
         });
-      } else if (e.type === "tool_call") {
+      } else if (e.type === "ToolCall") {
         items.push({
           kind: "tool_use",
           toolName: e.tool_name ?? "unknown",
-          toolCallId: e.tool_call_id,
-          args: e.arguments,
-          result: e.content,
+          toolCallId: e.tool_call_id ?? null,
+          args: e.arguments ?? null,
+          result: e.result ?? null,
           resultStreaming: e.streaming,
         });
-      } else if (e.type === "error" && e.content) {
+      } else if (e.type === "ErrorEntry" && e.content) {
         items.push({ kind: "error", content: e.content });
       }
     }
@@ -230,23 +230,35 @@ export function AgentWindow({ agentId, windowState, zoom }: AgentWindowProps) {
                         {detail.id}
                       </span>
                     </DetailField>
-                    {detail.branch && (
-                      <DetailField label="Branch">
-                        <span className="text-xs text-zinc-300 font-mono break-all">
-                          {detail.branch}
-                        </span>
+                    {detail.todos.length > 0 && (
+                      <DetailField label="Todos">
+                        <div className="space-y-0.5">
+                          {detail.todos.map((t) => (
+                            <div
+                              key={t.id}
+                              className="flex items-center gap-1.5 text-[11px]"
+                            >
+                              <span
+                                className={
+                                  t.done ? "text-emerald-400" : "text-zinc-500"
+                                }
+                              >
+                                {t.done ? "\u2713" : "\u25CB"}
+                              </span>
+                              <span
+                                className={
+                                  t.done
+                                    ? "text-zinc-500 line-through"
+                                    : "text-zinc-300"
+                                }
+                              >
+                                {t.text}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
                       </DetailField>
                     )}
-                    <DetailField label="Task">
-                      <p className="text-xs text-zinc-300 leading-relaxed whitespace-pre-wrap break-words line-clamp-6">
-                        {detail.task_prompt}
-                      </p>
-                    </DetailField>
-                    <DetailField label="Status">
-                      <p className="text-xs text-zinc-300 break-words">
-                        {detail.status_description || "\u2014"}
-                      </p>
-                    </DetailField>
                     {detail.supervisor_id && (
                       <DetailField label="Supervisor">
                         <span className="text-xs text-zinc-400 font-mono truncate block">
@@ -268,20 +280,6 @@ export function AgentWindow({ agentId, windowState, zoom }: AgentWindowProps) {
                               <span className="font-mono text-zinc-500">
                                 {c.id.slice(0, 8)}
                               </span>
-                            </div>
-                          ))}
-                        </div>
-                      </DetailField>
-                    )}
-                    {Object.keys(detail.memory).length > 0 && (
-                      <DetailField label="Memory">
-                        <div className="space-y-0.5">
-                          {Object.entries(detail.memory).map(([k, v]) => (
-                            <div key={k} className="text-[11px]">
-                              <span className="text-zinc-500 font-mono">
-                                {k}:
-                              </span>{" "}
-                              <span className="text-zinc-300">{v}</span>
                             </div>
                           ))}
                         </div>

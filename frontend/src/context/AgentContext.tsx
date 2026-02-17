@@ -15,7 +15,6 @@ import type {
   AgentEvent,
   ChatMessage,
   HistoryEntry,
-  PathAccessRequest,
   StreamingDelta,
 } from "@/types";
 
@@ -42,8 +41,6 @@ interface AgentContextValue {
   selectedAgentId: string | null;
   selectAgent: (id: string | null) => void;
   sendMessage: (content: string) => void;
-  pendingPathAccess: PathAccessRequest[];
-  resolvePathAccess: (requestId: string, approved: boolean) => void;
   openWindows: Map<string, WindowState>;
   openAgentWindow: (agentId: string, x: number, y: number) => void;
   closeAgentWindow: (agentId: string) => void;
@@ -87,9 +84,6 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   const [activeToolCalls, setActiveToolCalls] = useState<Map<string, string>>(
     () => new Map(),
   );
-  const [pendingPathAccess, setPendingPathAccess] = useState<
-    PathAccessRequest[]
-  >([]);
   const [eventPanelVisible, setEventPanelVisible] = useState(true);
   const msgTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(
     new Map(),
@@ -113,22 +107,6 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     }
     return null;
   }, [agents]);
-
-  const resolvePathAccess = useCallback(
-    (requestId: string, approved: boolean) => {
-      fetch(`/api/path-access/${requestId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ approved }),
-      }).catch(() => {
-        toast.error("Failed to resolve path access request");
-      });
-      setPendingPathAccess((prev) =>
-        prev.filter((r) => r.requestId !== requestId),
-      );
-    },
-    [],
-  );
 
   const onDisplayEvent = useCallback(
     (event: AgentEvent) => {
@@ -194,19 +172,6 @@ export function AgentProvider({ children }: { children: ReactNode }) {
         toolTimers.current.set(agentId, timer);
       }
 
-      if (event.type === "path_access_requested") {
-        const data = event.data;
-        setPendingPathAccess((prev) => [
-          ...prev,
-          {
-            requestId: data.request_id as string,
-            agentId: event.agent_id,
-            path: data.path as string,
-            reason: data.reason as string,
-          },
-        ]);
-      }
-
       if (event.type === "history_entry_delta") {
         const delta = event.data as unknown as StreamingDelta;
         setStreamingDeltas((prev) => {
@@ -221,15 +186,15 @@ export function AgentProvider({ children }: { children: ReactNode }) {
         const entry = event.data as unknown as HistoryEntry;
 
         if (
-          entry.type === "assistant_text" ||
-          entry.type === "assistant_thinking"
+          entry.type === "AssistantText" ||
+          entry.type === "AssistantThinking"
         ) {
           setStreamingDeltas((prev) => {
             const list = prev.get(event.agent_id);
             if (!list || list.length === 0) return prev;
             const next = new Map(prev);
             const filtered = list.filter(
-              (d) => d.type !== "content" && d.type !== "thinking",
+              (d) => d.type !== "ContentDelta" && d.type !== "ThinkingDelta",
             );
             if (filtered.length === 0) {
               next.delete(event.agent_id);
@@ -239,7 +204,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
             return next;
           });
         } else if (
-          entry.type === "tool_call" &&
+          entry.type === "ToolCall" &&
           entry.tool_call_id &&
           !entry.streaming
         ) {
@@ -250,7 +215,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
             const filtered = list.filter(
               (d) =>
                 !(
-                  d.type === "tool_result" &&
+                  d.type === "ToolResultDelta" &&
                   d.tool_call_id === entry.tool_call_id
                 ),
             );
@@ -268,13 +233,13 @@ export function AgentProvider({ children }: { children: ReactNode }) {
           const existing = next.get(event.agent_id) ?? [];
 
           if (
-            entry.type === "tool_call" &&
+            entry.type === "ToolCall" &&
             entry.tool_call_id &&
             !entry.streaming
           ) {
             const idx = existing.findIndex(
               (e) =>
-                e.type === "tool_call" &&
+                e.type === "ToolCall" &&
                 e.tool_call_id === entry.tool_call_id &&
                 e.streaming === true,
             );
@@ -409,8 +374,6 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       streamingDeltas,
       activeMessages,
       activeToolCalls,
-      pendingPathAccess,
-      resolvePathAccess,
       eventPanelVisible,
       toggleEventPanel,
     }),
@@ -435,8 +398,6 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       streamingDeltas,
       activeMessages,
       activeToolCalls,
-      pendingPathAccess,
-      resolvePathAccess,
       eventPanelVisible,
       toggleEventPanel,
     ],

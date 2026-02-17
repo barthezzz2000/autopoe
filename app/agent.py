@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import threading
-from dataclasses import asdict
 from queue import Empty, Queue
 from typing import Any
 
@@ -12,18 +11,24 @@ from app.events import event_bus
 from app.models import (
     AgentConfig,
     AgentState,
+    AssistantText,
+    AssistantThinking,
     ContentDelta,
+    ErrorEntry,
     Event,
     EventType,
     HistoryEntry,
-    HistoryType,
     Message,
+    ReceivedMessage,
+    SystemEntry,
+    SystemInjection,
     ThinkingDelta,
+    TodoItem,
+    ToolCall,
     ToolResultDelta,
 )
 from app.prompts import get_system_prompt
-from app.providers import LLMProvider
-from app.tools import build_tool_registry, is_tool_available
+from app.tools import build_tool_registry
 
 _tool_registry = build_tool_registry()
 
@@ -32,17 +37,14 @@ class Agent:
     def __init__(
         self,
         config: AgentConfig,
-        provider: LLMProvider,
         uuid: str | None = None,
     ) -> None:
         import uuid as _uuid
 
         self.uuid = uuid or str(_uuid.uuid4())
         self.config = config
-        self.provider = provider
         self.state = AgentState.INITIALIZING
-        self.memory: dict[str, str] = {}
-        self.status_description: str = ""
+        self.todos: list[TodoItem] = []
         self.children_ids: list[str] = []
         self.history: list[HistoryEntry] = []
         self._message_queue: Queue[Message] = Queue()
@@ -64,7 +66,6 @@ class Agent:
                 agent_id=self.uuid,
                 data={
                     "role": self.config.role.value,
-                    "task": self.config.task_prompt[:200],
                     "parent_id": self.config.supervisor_id,
                     "name": self.config.name,
                 },
@@ -73,26 +74,23 @@ class Agent:
 
     def _append_history(self, entry: HistoryEntry) -> None:
         self.history.append(entry)
+        data = entry.serialize()
         self._log.debug(
-            "History append: type={}, streaming={}, content_len={}, tool={}",
-            entry.type.value,
-            entry.streaming,
-            len(entry.content) if entry.content else 0,
-            entry.tool_name,
+            "History append: type={}, content_len={}",
+            data.get("type"),
+            len(entry.content) if hasattr(entry, "content") and entry.content else 0,
         )
         event_bus.emit(
             Event(
                 type=EventType.HISTORY_ENTRY_ADDED,
                 agent_id=self.uuid,
-                data=asdict(entry) | {"type": entry.type.value},
+                data=data,
             ),
         )
 
     def _run(self) -> None:
         system_prompt = get_system_prompt(self.config)
-        self._append_history(
-            HistoryEntry(type=HistoryType.SYSTEM, content=system_prompt),
-        )
+        self._append_history(SystemEntry(content=system_prompt))
 
         self.set_state(AgentState.IDLE, "initialized, awaiting first message")
         self._log.info("Agent started, waiting for first message")
@@ -115,41 +113,6 @@ class Agent:
                     len(tools_schema) if tools_schema else 0,
                     len(self.history),
                 )
-                for idx, msg in enumerate(messages):
-                    role = msg.get("role", "?")
-                    content = msg.get("content", "")
-                    tool_calls = msg.get("tool_calls")
-                    tool_call_id = msg.get("tool_call_id")
-                    content_preview = (
-                        (content[:200] + "...")
-                        if isinstance(content, str) and len(content) > 200
-                        else content
-                    )
-                    if tool_calls:
-                        tc_names = [
-                            tc.get("function", {}).get("name", "?") for tc in tool_calls
-                        ]
-                        self._log.debug(
-                            "  msg[{}] role={} tool_calls={}",
-                            idx,
-                            role,
-                            tc_names,
-                        )
-                    elif tool_call_id:
-                        self._log.debug(
-                            "  msg[{}] role={} tool_call_id={} content_len={}",
-                            idx,
-                            role,
-                            tool_call_id,
-                            len(content) if isinstance(content, str) else 0,
-                        )
-                    else:
-                        self._log.debug(
-                            "  msg[{}] role={} content={}",
-                            idx,
-                            role,
-                            content_preview,
-                        )
 
                 def _on_llm_chunk(chunk_type: str, text: str) -> None:
                     delta: ContentDelta | ThinkingDelta
@@ -164,11 +127,13 @@ class Agent:
                         Event(
                             type=EventType.HISTORY_ENTRY_DELTA,
                             agent_id=self.uuid,
-                            data=asdict(delta),
+                            data=delta.serialize(),
                         ),
                     )
 
-                response = self.provider.chat(
+                from app.providers.gateway import gateway
+
+                response = gateway.chat(
                     messages=messages,
                     tools=tools_schema or None,
                     on_chunk=_on_llm_chunk,
@@ -185,10 +150,7 @@ class Agent:
 
                 if response.thinking:
                     self._append_history(
-                        HistoryEntry(
-                            type=HistoryType.ASSISTANT_THINKING,
-                            content=response.thinking,
-                        ),
+                        AssistantThinking(content=response.thinking),
                     )
 
                 if response.tool_calls:
@@ -198,10 +160,7 @@ class Agent:
                     )
                     if response.content:
                         self._append_history(
-                            HistoryEntry(
-                                type=HistoryType.ASSISTANT_TEXT,
-                                content=response.content,
-                            ),
+                            AssistantText(content=response.content),
                         )
                     for tc in response.tool_calls:
                         self._handle_tool_call(tc.name, tc.arguments, tc.id)
@@ -209,10 +168,7 @@ class Agent:
                             break
                 elif response.content:
                     self._append_history(
-                        HistoryEntry(
-                            type=HistoryType.ASSISTANT_TEXT,
-                            content=response.content,
-                        ),
+                        AssistantText(content=response.content),
                     )
                     self._log.debug("No tool calls, transitioning to IDLE")
                     self.set_state(AgentState.IDLE, "text response, no tool calls")
@@ -228,10 +184,7 @@ class Agent:
 
                 tb_str = traceback.format_exc()
                 self._append_history(
-                    HistoryEntry(
-                        type=HistoryType.ERROR,
-                        content=f"{type(exc).__name__}: {exc}\n\n{tb_str}",
-                    ),
+                    ErrorEntry(content=f"{type(exc).__name__}: {exc}\n\n{tb_str}"),
                 )
                 self.set_state(AgentState.ERROR, f"{type(exc).__name__}: {exc}")
                 self._wait_for_input()
@@ -256,27 +209,27 @@ class Agent:
         pending_tool_calls: list[dict[str, Any]] = []
 
         for entry in self.history:
-            if entry.type == HistoryType.SYSTEM:
+            if isinstance(entry, SystemEntry):
                 messages.append({"role": "system", "content": entry.content})
 
-            elif entry.type == HistoryType.RECEIVED_MESSAGE:
+            elif isinstance(entry, ReceivedMessage):
                 self._flush_tool_calls(messages, pending_tool_calls)
-                prefixed = f"[Message from {entry.from_id}]: {entry.content}"
-                messages.append({"role": "user", "content": prefixed})
+                payload = json.dumps({"from": entry.from_id, "content": entry.content})
+                messages.append({"role": "user", "content": payload})
 
-            elif entry.type == HistoryType.SYSTEM_INJECTION:
+            elif isinstance(entry, SystemInjection):
                 self._flush_tool_calls(messages, pending_tool_calls)
-                prefixed = f"[System]: {entry.content}"
-                messages.append({"role": "user", "content": prefixed})
+                payload = json.dumps({"system": entry.content})
+                messages.append({"role": "user", "content": payload})
 
-            elif entry.type == HistoryType.ASSISTANT_TEXT:
+            elif isinstance(entry, AssistantText):
                 self._flush_tool_calls(messages, pending_tool_calls)
                 messages.append({"role": "assistant", "content": entry.content})
 
-            elif entry.type == HistoryType.ASSISTANT_THINKING:
+            elif isinstance(entry, AssistantThinking):
                 pass
 
-            elif entry.type == HistoryType.TOOL_CALL:
+            elif isinstance(entry, ToolCall):
                 if entry.streaming:
                     continue
 
@@ -290,20 +243,20 @@ class Agent:
                             if entry.arguments
                             else "{}",
                         },
-                    },
+                    }
                 )
 
-                if entry.content is not None:
+                if entry.result is not None:
                     self._flush_tool_calls(messages, pending_tool_calls)
                     messages.append(
                         {
                             "role": "tool",
                             "tool_call_id": entry.tool_call_id,
-                            "content": entry.content,
-                        },
+                            "content": entry.result,
+                        }
                     )
 
-            elif entry.type in (HistoryType.SENT_MESSAGE, HistoryType.ERROR):
+            elif isinstance(entry, ErrorEntry):
                 pass
 
         self._flush_tool_calls(messages, pending_tool_calls)
@@ -341,11 +294,7 @@ class Agent:
                 (msg.content[:100] + "...") if len(msg.content) > 100 else msg.content,
             )
             self._append_history(
-                HistoryEntry(
-                    type=HistoryType.RECEIVED_MESSAGE,
-                    content=msg.content,
-                    from_id=msg.from_id,
-                ),
+                ReceivedMessage(content=msg.content, from_id=msg.from_id),
             )
 
     def _wait_for_input(self) -> None:
@@ -353,11 +302,7 @@ class Agent:
             msg = self.try_get_message(timeout=2.0)
             if msg:
                 self._append_history(
-                    HistoryEntry(
-                        type=HistoryType.RECEIVED_MESSAGE,
-                        content=msg.content,
-                        from_id=msg.from_id,
-                    ),
+                    ReceivedMessage(content=msg.content, from_id=msg.from_id),
                 )
                 self.set_state(
                     AgentState.RUNNING,
@@ -383,27 +328,11 @@ class Agent:
             self._log.warning("Unknown tool: {}", name)
             error_msg = json.dumps({"error": f"Unknown tool: {name}"})
             self._append_history(
-                HistoryEntry(
-                    type=HistoryType.TOOL_CALL,
+                ToolCall(
                     tool_name=name,
                     tool_call_id=call_id,
                     arguments=arguments,
-                    content=error_msg,
-                    streaming=False,
-                ),
-            )
-            return error_msg
-
-        if not is_tool_available(self.config.permissions, name):
-            self._log.warning("Permission denied for tool: {}", name)
-            error_msg = json.dumps({"error": f"Permission denied for tool: {name}"})
-            self._append_history(
-                HistoryEntry(
-                    type=HistoryType.TOOL_CALL,
-                    tool_name=name,
-                    tool_call_id=call_id,
-                    arguments=arguments,
-                    content=error_msg,
+                    result=error_msg,
                     streaming=False,
                 ),
             )
@@ -417,15 +346,13 @@ class Agent:
             ),
         )
 
-        self._append_history(
-            HistoryEntry(
-                type=HistoryType.TOOL_CALL,
-                tool_name=name,
-                tool_call_id=call_id,
-                arguments=arguments,
-                streaming=True,
-            ),
+        streaming_entry = ToolCall(
+            tool_name=name,
+            tool_call_id=call_id,
+            arguments=arguments,
+            streaming=True,
         )
+        self._append_history(streaming_entry)
 
         def _on_tool_output(text: str) -> None:
             delta = ToolResultDelta(tool_call_id=call_id, text=text)
@@ -433,7 +360,7 @@ class Agent:
                 Event(
                     type=EventType.HISTORY_ENTRY_DELTA,
                     agent_id=self.uuid,
-                    data=asdict(delta),
+                    data=delta.serialize(),
                 ),
             )
 
@@ -450,63 +377,45 @@ class Agent:
                 len(result) if result else 0,
             )
 
-            for i in range(len(self.history) - 1, -1, -1):
-                entry = self.history[i]
-                if (
-                    entry.type == HistoryType.TOOL_CALL
-                    and entry.tool_call_id == call_id
-                    and entry.streaming
-                ):
-                    self.history[i] = HistoryEntry(
-                        type=HistoryType.TOOL_CALL,
-                        tool_name=name,
-                        tool_call_id=call_id,
-                        arguments=arguments,
-                        content=result,
-                        streaming=False,
-                    )
-                    event_bus.emit(
-                        Event(
-                            type=EventType.HISTORY_ENTRY_ADDED,
-                            agent_id=self.uuid,
-                            data=asdict(self.history[i])
-                            | {"type": self.history[i].type.value},
-                        ),
-                    )
-                    break
-
+            self._finalize_tool_call(call_id, name, arguments, result)
             return result
         except Exception as e:
             elapsed = _time.perf_counter() - t0
             self._log.exception("Tool {} failed after {:.2f}s", name, elapsed)
             error_msg = json.dumps({"error": str(e)})
-
-            for i in range(len(self.history) - 1, -1, -1):
-                entry = self.history[i]
-                if (
-                    entry.type == HistoryType.TOOL_CALL
-                    and entry.tool_call_id == call_id
-                    and entry.streaming
-                ):
-                    self.history[i] = HistoryEntry(
-                        type=HistoryType.TOOL_CALL,
-                        tool_name=name,
-                        tool_call_id=call_id,
-                        arguments=arguments,
-                        content=error_msg,
-                        streaming=False,
-                    )
-                    event_bus.emit(
-                        Event(
-                            type=EventType.HISTORY_ENTRY_ADDED,
-                            agent_id=self.uuid,
-                            data=asdict(self.history[i])
-                            | {"type": self.history[i].type.value},
-                        ),
-                    )
-                    break
-
+            self._finalize_tool_call(call_id, name, arguments, error_msg)
             return error_msg
+
+    def _finalize_tool_call(
+        self,
+        call_id: str,
+        name: str,
+        arguments: dict[str, Any],
+        result: str,
+    ) -> None:
+        for i in range(len(self.history) - 1, -1, -1):
+            entry = self.history[i]
+            if (
+                isinstance(entry, ToolCall)
+                and entry.tool_call_id == call_id
+                and entry.streaming
+            ):
+                final = ToolCall(
+                    tool_name=name,
+                    tool_call_id=call_id,
+                    arguments=arguments,
+                    result=result,
+                    streaming=False,
+                )
+                self.history[i] = final
+                event_bus.emit(
+                    Event(
+                        type=EventType.HISTORY_ENTRY_ADDED,
+                        agent_id=self.uuid,
+                        data=final.serialize(),
+                    ),
+                )
+                break
 
     def enqueue_message(self, msg: Message) -> None:
         self._message_queue.put(msg)
@@ -522,12 +431,7 @@ class Agent:
             return None
 
     def inject_system_message(self, content: str) -> None:
-        self._append_history(
-            HistoryEntry(
-                type=HistoryType.SYSTEM_INJECTION,
-                content=content,
-            ),
-        )
+        self._append_history(SystemInjection(content=content))
 
     def set_state(self, state: AgentState, reason: str = "") -> None:
         old = self.state
@@ -546,7 +450,7 @@ class Agent:
                     data={
                         "old_state": old.value,
                         "new_state": state.value,
-                        "status_description": self.status_description,
+                        "todos": [t.serialize() for t in self.todos],
                     },
                 ),
             )

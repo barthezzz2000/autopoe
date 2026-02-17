@@ -9,7 +9,8 @@ from typing import Any
 import httpx
 from loguru import logger
 
-from app.models import LLMResponse, ModelInfo, ToolCall
+from app.models import LLMResponse, ModelInfo
+from app.models import ToolCallResult as ToolCall
 from app.providers import LLMProvider
 
 

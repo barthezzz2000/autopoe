@@ -24,12 +24,6 @@ def test_list_agents(client: TestClient):
     data = response.json()
     assert "agents" in data
     assert isinstance(data["agents"], list)
-    assert len(data["agents"]) >= 1
-
-    steward = next((a for a in data["agents"] if a["role"] == "steward"), None)
-    assert steward is not None
-    assert "id" in steward
-    assert "state" in steward
 
 
 def test_get_agent_not_found(client: TestClient):

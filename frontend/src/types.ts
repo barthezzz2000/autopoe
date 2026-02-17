@@ -12,25 +12,29 @@ export type DisplayEventType =
   | "agent_state_changed"
   | "agent_message"
   | "agent_terminated"
-  | "tool_called"
-  | "path_access_requested";
+  | "tool_called";
 
 export type UpdateEventType =
   | DisplayEventType
   | "history_entry_added"
-  | "history_entry_delta"
-  | "path_access_requested";
+  | "history_entry_delta";
 
 export type EventType = UpdateEventType;
+
+export interface TodoItem {
+  id: number;
+  text: string;
+  done: boolean;
+  type: string;
+}
 
 export interface Agent {
   id: string;
   role: Role;
   state: AgentState;
-  branch: string | null;
   children: string[];
   name: string | null;
-  status_description: string;
+  todos: TodoItem[];
 }
 
 export interface AgentEvent {
@@ -48,24 +52,22 @@ export interface ChatMessage {
 }
 
 export type HistoryEntryType =
-  | "system"
-  | "system_injection"
-  | "received_message"
-  | "assistant_text"
-  | "assistant_thinking"
-  | "tool_call"
-  | "tool_result"
-  | "sent_message"
-  | "error";
+  | "SystemEntry"
+  | "SystemInjection"
+  | "ReceivedMessage"
+  | "AssistantText"
+  | "AssistantThinking"
+  | "ToolCall"
+  | "ErrorEntry";
 
 export interface HistoryEntry {
   type: HistoryEntryType;
-  content: string | null;
-  from_id: string | null;
-  to_id: string | null;
-  tool_name: string | null;
-  tool_call_id: string | null;
-  arguments: Record<string, unknown> | null;
+  content?: string | null;
+  from_id?: string | null;
+  tool_name?: string | null;
+  tool_call_id?: string | null;
+  arguments?: Record<string, unknown> | null;
+  result?: string | null;
   timestamp: number;
   streaming?: boolean;
 }
@@ -74,37 +76,20 @@ export interface AgentDetail {
   id: string;
   role: Role;
   state: AgentState;
-  branch: string | null;
   name: string | null;
   children: {
     id: string;
     role: Role;
     state: AgentState;
     name: string | null;
-    status_description: string;
+    todos: TodoItem[];
   }[];
-  task_prompt: string;
   supervisor_id: string | null;
-  status_description: string;
-  permissions: {
-    allowed_paths: string[];
-    blocked_paths: string[];
-    writable_paths: string[];
-    allowed_commands: string[];
-    network_access: boolean;
-  };
-  memory: Record<string, string>;
+  todos: TodoItem[];
   history: HistoryEntry[];
 }
 
-export interface PathAccessRequest {
-  requestId: string;
-  agentId: string;
-  path: string;
-  reason: string;
-}
-
 export type StreamingDelta =
-  | { type: "content"; text: string }
-  | { type: "thinking"; text: string }
-  | { type: "tool_result"; tool_call_id: string; text: string };
+  | { type: "ContentDelta"; text: string }
+  | { type: "ThinkingDelta"; text: string }
+  | { type: "ToolResultDelta"; tool_call_id: string; text: string };

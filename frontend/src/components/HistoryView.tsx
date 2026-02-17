@@ -30,7 +30,7 @@ function StreamingText({
   text,
   streaming,
 }: {
-  text: string | null;
+  text: string | null | undefined;
   streaming?: boolean;
 }) {
   return (
@@ -43,11 +43,11 @@ function StreamingText({
 
 function HistoryItem({ entry }: { entry: HistoryEntry }) {
   switch (entry.type) {
-    case "system":
-    case "system_injection":
+    case "SystemEntry":
+    case "SystemInjection":
       return (
         <CollapsibleBlock
-          label={entry.type === "system" ? "System" : "System Injection"}
+          label={entry.type === "SystemEntry" ? "System" : "System Injection"}
           icon={<Terminal className="size-3 text-zinc-500" />}
           className="border-zinc-700/50 bg-zinc-800/30"
           defaultOpen={false}
@@ -58,7 +58,7 @@ function HistoryItem({ entry }: { entry: HistoryEntry }) {
         </CollapsibleBlock>
       );
 
-    case "received_message":
+    case "ReceivedMessage":
       return (
         <div className="rounded border border-blue-500/20 bg-blue-500/5 px-2.5 py-1.5">
           <div className="flex items-center gap-1.5 mb-0.5">
@@ -73,7 +73,7 @@ function HistoryItem({ entry }: { entry: HistoryEntry }) {
         </div>
       );
 
-    case "assistant_thinking":
+    case "AssistantThinking":
       return (
         <CollapsibleBlock
           label="Thinking"
@@ -87,7 +87,7 @@ function HistoryItem({ entry }: { entry: HistoryEntry }) {
         </CollapsibleBlock>
       );
 
-    case "assistant_text":
+    case "AssistantText":
       return (
         <div className="rounded border border-emerald-500/20 bg-emerald-500/5 px-2.5 py-1.5">
           <div className="flex items-center gap-1.5 mb-0.5">
@@ -102,10 +102,10 @@ function HistoryItem({ entry }: { entry: HistoryEntry }) {
         </div>
       );
 
-    case "tool_call": {
-      const isSendMessage = entry.tool_name === "send_message";
+    case "ToolCall": {
+      const isSendMessage = entry.tool_name === "send";
       if (isSendMessage) {
-        const toId = entry.arguments?.to_id as string | undefined;
+        const toId = entry.arguments?.to as string | undefined;
         const content = entry.arguments?.content as string | undefined;
         return (
           <div className="rounded border border-purple-500/20 bg-purple-500/5 px-2.5 py-1.5">
@@ -137,14 +137,14 @@ function HistoryItem({ entry }: { entry: HistoryEntry }) {
                 {JSON.stringify(entry.arguments, null, 2)}
               </pre>
             </div>
-            {entry.content && (
+            {entry.result && (
               <div>
                 <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">
                   Result
                 </div>
                 <pre className="text-[11px] text-zinc-400 whitespace-pre-wrap break-words">
                   <StreamingText
-                    text={entry.content}
+                    text={entry.result}
                     streaming={entry.streaming}
                   />
                 </pre>
@@ -155,22 +155,7 @@ function HistoryItem({ entry }: { entry: HistoryEntry }) {
       );
     }
 
-    case "sent_message":
-      return (
-        <div className="rounded border border-purple-500/20 bg-purple-500/5 px-2.5 py-1.5">
-          <div className="flex items-center gap-1.5 mb-0.5">
-            <Send className="size-3 text-purple-400" />
-            <span className="text-[10px] font-medium text-purple-400">
-              To {entry.to_id ? entry.to_id.slice(0, 8) : "unknown"}
-            </span>
-          </div>
-          <p className="text-xs text-purple-200 whitespace-pre-wrap break-words">
-            {entry.content}
-          </p>
-        </div>
-      );
-
-    case "error":
+    case "ErrorEntry":
       return (
         <div className="rounded border border-red-500/30 bg-red-500/5 px-2.5 py-1.5">
           <div className="flex items-center gap-1.5 mb-0.5">

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-from dataclasses import asdict
 
 from loguru import logger
 from starlette.websockets import WebSocket
@@ -46,7 +45,15 @@ class EventBus:
             )
 
     async def _broadcast(self, event: Event) -> None:
-        payload = json.dumps(asdict(event), default=str)
+        payload = json.dumps(
+            {
+                "type": event.type.value,
+                "agent_id": event.agent_id,
+                "data": event.data,
+                "timestamp": event.timestamp,
+            },
+            default=str,
+        )
 
         dead: list[WebSocket] = []
         for ws in self._update_connections:

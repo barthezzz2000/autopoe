@@ -301,11 +301,6 @@ export function AgentTree() {
           <div className="mt-1 text-[10px] text-zinc-500 font-mono">
             {tooltip.agentId.slice(0, 8)}
           </div>
-          {tooltipAgent.branch && (
-            <div className="mt-0.5 text-[10px] text-zinc-400 font-mono">
-              {tooltipAgent.branch}
-            </div>
-          )}
         </div>
       )}
 

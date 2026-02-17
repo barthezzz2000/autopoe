@@ -9,7 +9,7 @@ from loguru import logger
 if TYPE_CHECKING:
     from loguru import Record
 
-from app.settings import Settings
+from app.config import Config
 
 
 def _stderr_format(record: Record) -> str:
@@ -25,11 +25,11 @@ def _stderr_format(record: Record) -> str:
     )
 
 
-def setup_logging(settings: Settings | None = None) -> None:
-    if settings is None:
-        settings = Settings()
+def setup_logging(config: Config | None = None) -> None:
+    if config is None:
+        config = Config()
 
-    level = "DEBUG" if settings.DEBUG else settings.LOG_LEVEL.upper()
+    level = "DEBUG" if config.DEBUG else config.LOG_LEVEL.upper()
 
     logger.remove()
 
@@ -39,10 +39,10 @@ def setup_logging(settings: Settings | None = None) -> None:
         level=level,
         colorize=True,
         backtrace=True,
-        diagnose=settings.DEBUG,
+        diagnose=config.DEBUG,
     )
 
-    log_dir = Path(settings.LOG_DIR)
+    log_dir = Path(config.LOG_DIR)
     log_dir.mkdir(parents=True, exist_ok=True)
 
     logger.add(

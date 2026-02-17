@@ -9,13 +9,13 @@ function reduceDeltas(deltas: StreamingDelta[]) {
 
   for (const d of deltas) {
     switch (d.type) {
-      case "content":
+      case "ContentDelta":
         content += d.text;
         break;
-      case "thinking":
+      case "ThinkingDelta":
         thinking += d.text;
         break;
-      case "tool_result":
+      case "ToolResultDelta":
         toolResults.set(
           d.tool_call_id,
           (toolResults.get(d.tool_call_id) ?? "") + d.text,
@@ -77,26 +77,16 @@ export function useAgentDetail(agentId: string | null) {
 
       if (thinking) {
         base.push({
-          type: "assistant_thinking",
+          type: "AssistantThinking",
           content: thinking,
-          from_id: null,
-          to_id: null,
-          tool_name: null,
-          tool_call_id: null,
-          arguments: null,
           timestamp: now,
           streaming: true,
         } satisfies HistoryEntry);
       }
       if (content) {
         base.push({
-          type: "assistant_text",
+          type: "AssistantText",
           content,
-          from_id: null,
-          to_id: null,
-          tool_name: null,
-          tool_call_id: null,
-          arguments: null,
           timestamp: now,
           streaming: true,
         } satisfies HistoryEntry);
@@ -106,11 +96,11 @@ export function useAgentDetail(agentId: string | null) {
           for (let i = base.length - 1; i >= 0; i--) {
             const entry = base[i];
             if (
-              entry.type === "tool_call" &&
+              entry.type === "ToolCall" &&
               entry.tool_call_id === toolCallId &&
               entry.streaming
             ) {
-              base[i] = { ...entry, content: resultText };
+              base[i] = { ...entry, result: resultText };
               break;
             }
           }
@@ -122,7 +112,7 @@ export function useAgentDetail(agentId: string | null) {
     const merged = { ...detail, history: base };
     if (liveAgent) {
       merged.state = liveAgent.state;
-      merged.status_description = liveAgent.status_description;
+      merged.todos = liveAgent.todos;
     }
     return merged;
   }, [detail, agentId, agentHistories, streamingDeltas, agents, fetchedAt]);
