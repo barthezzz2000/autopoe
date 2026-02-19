@@ -50,8 +50,8 @@ interface AgentContextValue {
 
 const AgentContext = createContext<AgentContextValue | null>(null);
 
-const DEFAULT_WIDTH = 700;
-const DEFAULT_HEIGHT = 480;
+export const DEFAULT_WIDTH = 700;
+export const DEFAULT_HEIGHT = 480;
 
 const MESSAGE_ANIMATION_MS = 2000;
 const TOOL_CALL_ANIMATION_MS = 2000;

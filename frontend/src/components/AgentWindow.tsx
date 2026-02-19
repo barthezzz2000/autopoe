@@ -59,6 +59,11 @@ export function AgentWindow({ agentId, windowState, zoom }: AgentWindowProps) {
   const isAtBottom = useRef(true);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  useEffect(() => {
+    const t = setTimeout(() => textareaRef.current?.focus(), 50);
+    return () => clearTimeout(t);
+  }, []);
+
   const onScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;

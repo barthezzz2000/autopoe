@@ -28,7 +28,11 @@ import { AgentGraphNode } from "@/components/AgentGraphNode";
 import { AgentWindow } from "@/components/AgentWindow";
 import { ContextMenu, type ContextMenuEntry } from "@/components/ContextMenu";
 import { getLayoutedElements } from "@/lib/layout";
-import { useAgent } from "@/context/AgentContext";
+import {
+  useAgent,
+  DEFAULT_WIDTH,
+  DEFAULT_HEIGHT,
+} from "@/context/AgentContext";
 import { Badge } from "@/components/ui/badge";
 import { stateBadgeColor } from "@/lib/constants";
 import { terminateAgent, mergeToMain } from "@/lib/api";
@@ -160,7 +164,7 @@ export function AgentTree({ onCreateSteward }: AgentTreeProps) {
           x: mouseEvent.clientX,
           y: mouseEvent.clientY,
         });
-        openAgentWindow(node.id, flowPos.x + 20, flowPos.y - 40);
+        openAgentWindow(node.id, flowPos.x, flowPos.y);
       }
     },
     [selectAgent, openAgentWindow],
@@ -373,7 +377,10 @@ function FlowWindowLayer({ screenToFlowRef }: FlowWindowLayerProps) {
   const { openWindows } = useAgent();
 
   useEffect(() => {
-    screenToFlowRef.current = screenToFlowPosition;
+    screenToFlowRef.current = (pos) => {
+      const fp = screenToFlowPosition(pos);
+      return { x: fp.x - DEFAULT_WIDTH / 2, y: fp.y - DEFAULT_HEIGHT / 2 };
+    };
   }, [screenToFlowPosition, screenToFlowRef]);
 
   return (
