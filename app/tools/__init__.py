@@ -50,6 +50,7 @@ class ToolRegistry:
 
 def build_tool_registry() -> ToolRegistry:
     from app.tools.agents import ListAgentsTool
+    from app.tools.delete import DeleteTool
     from app.tools.edit import EditTool
     from app.tools.exec import ExecTool
     from app.tools.exit import ExitTool
@@ -69,6 +70,7 @@ def build_tool_registry() -> ToolRegistry:
         ReadTool,
         WriteTool,
         EditTool,
+        DeleteTool,
         ExecTool,
         FetchTool,
         MergeTool,
