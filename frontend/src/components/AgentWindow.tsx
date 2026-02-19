@@ -332,7 +332,7 @@ export function AgentWindow({ agentId, windowState, zoom }: AgentWindowProps) {
                     )}
                   </div>
                 </div>
-                <div className="border-t border-zinc-700/60 p-2 flex gap-2 items-end">
+                <div className="mx-2 mb-2 rounded-xl border border-zinc-700/40 bg-zinc-800/80 backdrop-blur-md shadow-lg shadow-black/30 flex gap-2 items-end px-3 py-2">
                   <textarea
                     ref={textareaRef}
                     value={input}
@@ -341,12 +341,12 @@ export function AgentWindow({ agentId, windowState, zoom }: AgentWindowProps) {
                     onInput={onTextareaInput}
                     rows={1}
                     placeholder="Send a message..."
-                    className="flex-1 resize-none rounded bg-zinc-800 border border-zinc-700 px-2 py-1.5 text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 scrollbar-none"
+                    className="flex-1 resize-none bg-transparent border-none focus:outline-none text-xs text-zinc-100 placeholder-zinc-500 scrollbar-none"
                     style={{ maxHeight: 200 }}
                   />
                   <button
                     onClick={sendMsg}
-                    className="shrink-0 rounded bg-zinc-700 p-1.5 text-zinc-300 hover:bg-zinc-600 hover:text-zinc-100 transition-colors"
+                    className="shrink-0 rounded-lg bg-zinc-700 p-1.5 text-zinc-300 hover:bg-zinc-600 hover:text-zinc-100 transition-colors"
                   >
                     <Send className="size-3.5" />
                   </button>
