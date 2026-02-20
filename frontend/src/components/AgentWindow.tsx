@@ -442,9 +442,10 @@ function ThinkingBlock({
       {(expanded || showCollapsed) && (
         <div className="relative px-2.5 pb-2">
           <div className={showCollapsed ? "max-h-[3.6em] overflow-hidden" : ""}>
-            <p className="whitespace-pre-wrap break-words text-[11px] leading-[1.2em] text-amber-200/60">
-              {content}
-            </p>
+            <MarkdownContent
+              content={content}
+              className="text-[11px] leading-[1.2em] text-amber-200/60"
+            />
           </div>
           {showCollapsed && (
             <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-amber-950/40 to-transparent pointer-events-none rounded-b-lg" />
@@ -453,9 +454,10 @@ function ThinkingBlock({
       )}
       {!expanded && !showCollapsed && !isLong && (
         <div className="px-2.5 pb-2">
-          <p className="whitespace-pre-wrap break-words text-[11px] leading-relaxed text-amber-200/60">
-            {content}
-          </p>
+          <MarkdownContent
+            content={content}
+            className="text-[11px] leading-relaxed text-amber-200/60"
+          />
         </div>
       )}
     </div>
