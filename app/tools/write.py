@@ -20,7 +20,7 @@ class WriteTool(Tool):
         "properties": {
             "path": {
                 "type": "string",
-                "description": f"Relative path within the repository or Absolute path starting with {VIRTUAL_ROOT}",
+                "description": f"Relative path within the repository or absolute path starting with {VIRTUAL_ROOT}",
             },
             "content": {
                 "type": "string",
