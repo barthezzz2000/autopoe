@@ -11,7 +11,11 @@ if TYPE_CHECKING:
 
 class IdleTool(Tool):
     name = "idle"
-    description = "Enter idle state and wait for incoming messages. The agent sleeps until a message arrives or it is terminated."
+    description = (
+        "Enter idle state. The agent suspends execution until a new message arrives. "
+        "Use this when you have nothing more to do and are waiting for a response from "
+        "another agent or the human. Incoming messages will automatically re-activate you."
+    )
     parameters: ClassVar[dict[str, Any]] = {
         "type": "object",
         "properties": {},
@@ -21,31 +25,5 @@ class IdleTool(Tool):
         from app.models import AgentState
 
         agent.set_state(AgentState.IDLE)
-        messages: list[dict[str, str]] = []
-
-        while not agent._terminate.is_set():
-            msg = agent.try_get_message(timeout=2.0)
-            if msg:
-                messages.append(
-                    {
-                        "from_id": msg.from_id,
-                        "content": msg.content,
-                    }
-                )
-                break
-
-        while True:
-            msg = agent.try_get_message(timeout=0)
-            if msg is None:
-                break
-            messages.append(
-                {
-                    "from_id": msg.from_id,
-                    "content": msg.content,
-                }
-            )
-
-        agent.set_state(AgentState.RUNNING)
-        if not messages:
-            return json.dumps({"messages": [], "note": "Terminated while idle"})
-        return json.dumps({"messages": messages})
+        agent._idle_requested = True
+        return json.dumps({"status": "idle"})

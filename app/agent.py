@@ -49,6 +49,7 @@ class Agent:
         self.history: list[HistoryEntry] = []
         self._message_queue: Queue[Message] = Queue()
         self._terminate = threading.Event()
+        self._idle_requested: bool = False
         self._thread: threading.Thread | None = None
         self._termination_reason: str = ""
         self._log = logger.bind(agent_id=self.uuid[:8], role=self.config.role.value)
@@ -164,8 +165,13 @@ class Agent:
                         )
                     for tc in response.tool_calls:
                         self._handle_tool_call(tc.name, tc.arguments, tc.id)
-                        if self._terminate.is_set():
+                        if self._terminate.is_set() or self._idle_requested:
                             break
+                    if self._idle_requested:
+                        self._idle_requested = False
+                        if not self._terminate.is_set():
+                            self._log.debug("Idle requested, waiting for input")
+                            self._wait_for_input()
                 elif response.content:
                     self._append_history(
                         AssistantText(content=response.content),
