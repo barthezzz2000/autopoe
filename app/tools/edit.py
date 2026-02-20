@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 from loguru import logger
 
-from app.sandbox import VIRTUAL_ROOT, resolve_path
+from app.sandbox import VIRTUAL_ROOT, resolve_path, sanitize_output
 from app.tools import Tool
 
 if TYPE_CHECKING:
@@ -66,14 +66,14 @@ class EditTool(Tool):
                     {
                         "status": "patched",
                         "path": args["path"],
-                        "output": result.stdout[:1000],
+                        "output": sanitize_output(agent, result.stdout)[:1000],
                     }
                 )
             return json.dumps(
                 {
                     "error": "Patch failed",
-                    "stdout": result.stdout[:1000],
-                    "stderr": result.stderr[:1000],
+                    "stdout": sanitize_output(agent, result.stdout)[:1000],
+                    "stderr": sanitize_output(agent, result.stderr)[:1000],
                 }
             )
         except Exception as e:

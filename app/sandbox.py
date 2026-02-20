@@ -34,6 +34,13 @@ def resolve_path(agent: Agent, logical_path: Path) -> Path:
     return real_path
 
 
+def sanitize_output(agent: Agent, text: str) -> str:
+    worktree = agent.config.worktree_path
+    if worktree:
+        text = text.replace(str(worktree), str(VIRTUAL_ROOT).rstrip("/"))
+    return text
+
+
 def build_firejail_cmd(
     agent: Agent,
     command: str,
