@@ -21,7 +21,6 @@ const emptyForm = (): Omit<Provider, "id"> => ({
   type: "openai_compatible",
   base_url: "",
   api_key: "",
-  default_model: "",
 });
 
 export function ProvidersPage() {
@@ -74,7 +73,6 @@ export function ProvidersPage() {
       type: p.type,
       base_url: p.base_url,
       api_key: p.api_key,
-      default_model: p.default_model,
     });
     setShowForm(true);
   };
@@ -150,19 +148,6 @@ export function ProvidersPage() {
                 onChange={(e) => setForm({ ...form, base_url: e.target.value })}
                 className="w-full rounded border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-sm text-zinc-200 focus:outline-none focus:border-zinc-500"
                 placeholder="https://api.example.com/v1"
-              />
-            </div>
-            <div>
-              <label className="text-xs text-zinc-400 mb-1 block">
-                Default Model
-              </label>
-              <input
-                value={form.default_model}
-                onChange={(e) =>
-                  setForm({ ...form, default_model: e.target.value })
-                }
-                className="w-full rounded border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-sm text-zinc-200 focus:outline-none focus:border-zinc-500"
-                placeholder="model-name"
               />
             </div>
             <div className="col-span-2">

@@ -16,7 +16,6 @@ class CreateProviderRequest(BaseModel):
     type: str
     base_url: str
     api_key: str = ""
-    default_model: str = ""
 
 
 class UpdateProviderRequest(BaseModel):
@@ -24,11 +23,10 @@ class UpdateProviderRequest(BaseModel):
     type: str | None = None
     base_url: str | None = None
     api_key: str | None = None
-    default_model: str | None = None
 
 
 @router.get("/api/providers")
-async def list_providers() -> dict:
+async def list_providers() -> dict[str, object]:
     settings = get_settings()
     return {
         "providers": [
@@ -38,7 +36,6 @@ async def list_providers() -> dict:
                 "type": p.type,
                 "base_url": p.base_url,
                 "api_key": p.api_key,
-                "default_model": p.default_model,
             }
             for p in settings.providers
         ]
@@ -46,7 +43,7 @@ async def list_providers() -> dict:
 
 
 @router.post("/api/providers")
-async def create_provider(req: CreateProviderRequest) -> dict:
+async def create_provider(req: CreateProviderRequest) -> dict[str, object]:
     settings = get_settings()
     provider = ProviderConfig(
         id=str(uuid.uuid4()),
@@ -54,7 +51,6 @@ async def create_provider(req: CreateProviderRequest) -> dict:
         type=req.type,
         base_url=req.base_url,
         api_key=req.api_key,
-        default_model=req.default_model,
     )
     settings.providers.append(provider)
     save_settings(settings)
@@ -64,12 +60,13 @@ async def create_provider(req: CreateProviderRequest) -> dict:
         "type": provider.type,
         "base_url": provider.base_url,
         "api_key": provider.api_key,
-        "default_model": provider.default_model,
     }
 
 
 @router.put("/api/providers/{provider_id}")
-async def update_provider(provider_id: str, req: UpdateProviderRequest) -> dict:
+async def update_provider(
+    provider_id: str, req: UpdateProviderRequest
+) -> dict[str, object]:
     settings = get_settings()
     for p in settings.providers:
         if p.id == provider_id:
@@ -81,8 +78,6 @@ async def update_provider(provider_id: str, req: UpdateProviderRequest) -> dict:
                 p.base_url = req.base_url
             if req.api_key is not None:
                 p.api_key = req.api_key
-            if req.default_model is not None:
-                p.default_model = req.default_model
             save_settings(settings)
             return {
                 "id": p.id,
@@ -90,13 +85,12 @@ async def update_provider(provider_id: str, req: UpdateProviderRequest) -> dict:
                 "type": p.type,
                 "base_url": p.base_url,
                 "api_key": p.api_key,
-                "default_model": p.default_model,
             }
     raise HTTPException(status_code=404, detail="Provider not found")
 
 
 @router.delete("/api/providers/{provider_id}")
-async def delete_provider(provider_id: str) -> dict:
+async def delete_provider(provider_id: str) -> dict[str, object]:
     settings = get_settings()
     before = len(settings.providers)
     settings.providers = [p for p in settings.providers if p.id != provider_id]
@@ -111,7 +105,7 @@ class ListModelsRequest(BaseModel):
 
 
 @router.post("/api/providers/models")
-async def list_provider_models(req: ListModelsRequest) -> dict:
+async def list_provider_models(req: ListModelsRequest) -> dict[str, object]:
     from app.providers.gateway import gateway
 
     try:

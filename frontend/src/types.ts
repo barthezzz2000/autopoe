@@ -102,5 +102,4 @@ export interface Provider {
   type: string;
   base_url: string;
   api_key: string;
-  default_model: string;
 }

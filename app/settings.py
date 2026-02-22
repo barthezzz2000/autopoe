@@ -22,7 +22,6 @@ class ProviderConfig:
     type: str
     base_url: str
     api_key: str
-    default_model: str
 
 
 @dataclass
@@ -76,7 +75,19 @@ def load_settings() -> Settings:
         )
 
         providers_raw = data.get("providers", [])
-        providers = [ProviderConfig(**p) for p in providers_raw]
+        providers = []
+        for p in providers_raw:
+            if not isinstance(p, dict):
+                continue
+            providers.append(
+                ProviderConfig(
+                    id=str(p.get("id", "")),
+                    name=str(p.get("name", "")),
+                    type=str(p.get("type", "openai_compatible")),
+                    base_url=str(p.get("base_url", "")),
+                    api_key=str(p.get("api_key", "")),
+                )
+            )
 
         roles_raw = data.get("roles", [])
         roles = [RoleConfig(**r) for r in roles_raw]

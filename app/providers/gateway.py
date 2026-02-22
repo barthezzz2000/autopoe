@@ -37,7 +37,7 @@ class ProviderGateway:
             provider_type=cfg.type,
             base_url=cfg.base_url,
             api_key=cfg.api_key,
-            model=cfg.default_model,
+            model="",
             provider_name=cfg.name,
         )
         return provider.list_models()
@@ -54,7 +54,7 @@ class ProviderGateway:
             provider_type = cfg.type
             base_url = cfg.base_url
             api_key = cfg.api_key
-            model = ms.active_model or cfg.default_model
+            model = ms.active_model
             provider_name = cfg.name
             cache_key = (cfg.id, model)
         else:
