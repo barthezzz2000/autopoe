@@ -44,6 +44,8 @@ async def list_providers() -> dict[str, object]:
 
 @router.post("/api/providers")
 async def create_provider(req: CreateProviderRequest) -> dict[str, object]:
+    from app.providers.gateway import gateway
+
     settings = get_settings()
     provider = ProviderConfig(
         id=str(uuid.uuid4()),
@@ -54,6 +56,7 @@ async def create_provider(req: CreateProviderRequest) -> dict[str, object]:
     )
     settings.providers.append(provider)
     save_settings(settings)
+    gateway.invalidate_cache()
     return {
         "id": provider.id,
         "name": provider.name,
@@ -67,6 +70,8 @@ async def create_provider(req: CreateProviderRequest) -> dict[str, object]:
 async def update_provider(
     provider_id: str, req: UpdateProviderRequest
 ) -> dict[str, object]:
+    from app.providers.gateway import gateway
+
     settings = get_settings()
     for p in settings.providers:
         if p.id == provider_id:
@@ -79,6 +84,7 @@ async def update_provider(
             if req.api_key is not None:
                 p.api_key = req.api_key
             save_settings(settings)
+            gateway.invalidate_cache()
             return {
                 "id": p.id,
                 "name": p.name,
@@ -91,12 +97,15 @@ async def update_provider(
 
 @router.delete("/api/providers/{provider_id}")
 async def delete_provider(provider_id: str) -> dict[str, object]:
+    from app.providers.gateway import gateway
+
     settings = get_settings()
     before = len(settings.providers)
     settings.providers = [p for p in settings.providers if p.id != provider_id]
     if len(settings.providers) == before:
         raise HTTPException(status_code=404, detail="Provider not found")
     save_settings(settings)
+    gateway.invalidate_cache()
     return {"status": "deleted"}
 
 

@@ -15,6 +15,10 @@ class ProviderGateway:
         self._cache: dict[tuple[str, ...], LLMProvider] = {}
         self._lock = threading.Lock()
 
+    def invalidate_cache(self) -> None:
+        with self._lock:
+            self._cache.clear()
+
     def chat(
         self,
         messages: list[dict[str, Any]],
@@ -56,14 +60,28 @@ class ProviderGateway:
             api_key = cfg.api_key
             model = ms.active_model
             provider_name = cfg.name
-            cache_key = (cfg.id, model)
+            cache_key = (
+                cfg.id,
+                provider_type,
+                base_url,
+                api_key,
+                provider_name,
+                model,
+            )
         else:
             provider_type = "openai_compatible"
             base_url = "https://openrouter.ai/api/v1"
             api_key = ""
             model = ms.active_model
             provider_name = "OpenRouter"
-            cache_key = ("__default__", model)
+            cache_key = (
+                "__default__",
+                provider_type,
+                base_url,
+                api_key,
+                provider_name,
+                model,
+            )
 
         with self._lock:
             if cache_key in self._cache:
