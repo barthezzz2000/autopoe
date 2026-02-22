@@ -34,43 +34,42 @@ export function AgentGraphNode({ data }: NodeProps) {
       : stateBorder[state];
 
   const nodeColors = {
-    steward: "from-cyan-500/18 to-slate-900/70",
-    conductor: "from-sky-500/16 to-slate-900/70",
-    agent: "from-slate-500/10 to-slate-900/65",
+    steward: "bg-[#151b28]",
+    conductor: "bg-[#161c2a]",
+    agent: "bg-[#131923]",
   };
 
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.3, ease: [0.175, 0.885, 0.32, 1.275] }}
+      transition={{ duration: 0.22, ease: "easeOut" }}
       className={cn(
-        "relative flex min-w-[210px] items-center gap-3 rounded-xl border-2 px-4 py-3",
-        "bg-gradient-to-br shadow-[0_16px_45px_rgba(0,0,0,0.45)]",
+        "relative flex min-w-[210px] items-center gap-3 rounded-md border px-4 py-3",
+        "shadow-[0_10px_24px_rgba(0,0,0,0.32)]",
         nodeColors[node_type],
         baseBorder,
         selected
-          ? "border-primary shadow-[0_0_30px_-5px_rgba(56,189,248,0.42)]"
-          : "border-white/25 hover:border-white/45",
-        isRunning && "shadow-[0_0_20px_-5px_rgba(52,211,153,0.32)]",
+          ? "border-primary/80 shadow-[0_0_0_1px_rgba(139,162,255,0.32)]"
+          : "border-white/18 hover:border-white/30",
+        isRunning && "shadow-[0_12px_28px_rgba(16,185,129,0.12)]",
         state === "terminated" && "opacity-40 grayscale",
       )}
     >
       <Handle
         type="target"
         position={Position.Top}
-        className="!size-3 !border-2 !border-card !bg-muted-foreground"
+        className="!size-2.5 !border !border-card !bg-muted-foreground"
       />
 
       <div
         className={cn(
-          "flex size-10 shrink-0 items-center justify-center rounded-lg",
-          "bg-gradient-to-br shadow-inner",
+          "flex size-9 shrink-0 items-center justify-center rounded-sm border border-white/10",
           node_type === "steward"
-            ? "from-cyan-500/30 to-cyan-700/15 text-cyan-200"
+            ? "bg-[#1a2334] text-[#9cb0ff]"
             : node_type === "conductor"
-              ? "from-sky-500/30 to-sky-700/15 text-sky-200"
-              : "from-slate-500/20 to-slate-700/10 text-slate-300",
+              ? "bg-[#1a2232] text-[#a7bcff]"
+              : "bg-[#1a202d] text-slate-300",
         )}
       >
         <Icon className="size-5" />
@@ -97,7 +96,7 @@ export function AgentGraphNode({ data }: NodeProps) {
           )}
           <span
             className={cn(
-              "relative inline-flex size-3 rounded-full border-2 border-card shadow-sm",
+              "relative inline-flex size-3 rounded-full border border-card shadow-sm",
               isToolActive ? "bg-amber-500" : stateColor[state],
             )}
           />
@@ -110,7 +109,7 @@ export function AgentGraphNode({ data }: NodeProps) {
           animate={{ opacity: 1, y: 0 }}
           className="absolute -bottom-7 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap"
         >
-          <span className="rounded-md border border-amber-500/35 bg-black/80 px-2 py-1 text-[10px] font-mono text-amber-300 shadow-lg backdrop-blur-sm">
+          <span className="rounded-sm border border-amber-500/35 bg-[#131924] px-2 py-1 text-[10px] font-mono text-amber-300 shadow-lg backdrop-blur-sm">
             ⚡ {toolCall}
           </span>
         </motion.div>
@@ -119,7 +118,7 @@ export function AgentGraphNode({ data }: NodeProps) {
       <Handle
         type="source"
         position={Position.Bottom}
-        className="!size-3 !border-2 !border-card !bg-muted-foreground"
+        className="!size-2.5 !border !border-card !bg-muted-foreground"
       />
     </motion.div>
   );

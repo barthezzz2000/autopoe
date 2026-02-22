@@ -18,7 +18,7 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
-import { AgentTree } from "@/components/AgentTree";
+import { AgentGraph } from "@/components/AgentGraph";
 import { useAgent } from "@/context/AgentContext";
 import { cn } from "@/lib/utils";
 import { MarkdownContent } from "@/components/MarkdownContent";
@@ -60,15 +60,33 @@ export function HomePage() {
   };
 
   return (
-    <div className="relative h-full overflow-hidden rounded-[1.65rem]">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(63,63,70,0.26),transparent_56%),radial-gradient(ellipse_at_bottom,rgba(24,24,27,0.4),transparent_62%)]" />
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(0,0,0,0.35),rgba(0,0,0,0.86))]" />
+    <div className="relative h-full overflow-hidden rounded-xl">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(59,130,246,0.06),transparent_48%),radial-gradient(ellipse_at_bottom_right,rgba(17,24,39,0.5),transparent_62%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(8,10,16,0.38),rgba(5,6,10,0.9))]" />
 
       <div className="absolute inset-0">
-        <AgentTree />
+        <AgentGraph />
       </div>
 
-      <div className="absolute left-4 top-4 z-30 flex max-w-[70%] flex-wrap items-center gap-2 sm:left-16">
+      <div className="absolute inset-x-0 top-0 z-30 border-b border-white/10 bg-[#0d1119]/82 px-5 py-2.5 backdrop-blur-sm sm:px-6">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-foreground/95">
+              Agent Workspace
+            </p>
+            <p className="truncate text-[11px] text-muted-foreground">
+              Focused graph view with floating details panel
+            </p>
+          </div>
+          <div className="hidden items-center gap-2 text-[11px] text-muted-foreground sm:flex">
+            <span>{metrics.total} nodes</span>
+            <span className="text-white/20">/</span>
+            <span>{metrics.running} RUNNING</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="absolute left-4 top-14 z-30 flex max-w-[75%] flex-wrap items-center gap-2 sm:left-6">
         <BadgeChip>
           <Radio
             className={cn(
@@ -92,7 +110,7 @@ export function HomePage() {
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.3, delay: 0.15 }}
         onClick={togglePanel}
-        className="absolute right-4 top-4 z-40 flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-black/70 text-muted-foreground shadow-[0_10px_30px_rgba(0,0,0,0.55)] backdrop-blur-lg transition-colors hover:text-foreground"
+        className="absolute right-4 top-14 z-40 flex h-9 w-9 items-center justify-center rounded-md border border-white/10 bg-[#111520]/90 text-muted-foreground shadow-[0_8px_24px_rgba(0,0,0,0.4)] backdrop-blur-sm transition-colors hover:bg-[#171b27] hover:text-foreground"
         title={panelVisible ? "Hide panel" : "Show panel"}
       >
         {panelVisible ? (
@@ -109,9 +127,9 @@ export function HomePage() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 30 }}
             transition={{ type: "spring", stiffness: 320, damping: 30 }}
-            className="absolute bottom-4 right-4 top-16 z-30 w-[min(92vw,420px)] rounded-2xl border border-white/10 bg-black/70 shadow-[0_30px_120px_rgba(0,0,0,0.65)] backdrop-blur-xl"
+            className="absolute bottom-3 right-3 top-24 z-30 w-[min(92vw,420px)] rounded-lg border border-white/10 bg-[#0f131d]/92 shadow-[0_20px_70px_rgba(0,0,0,0.5)] backdrop-blur-sm"
           >
-            <div className="flex h-full flex-col overflow-hidden rounded-2xl">
+            <div className="flex h-full flex-col overflow-hidden rounded-lg">
               {selectedAgent ? (
                 <AgentDetailPanel
                   agent={selectedAgent}
@@ -130,7 +148,7 @@ export function HomePage() {
 
 function BadgeChip({ children }: { children: ReactNode }) {
   return (
-    <div className="pointer-events-auto flex items-center gap-1.5 rounded-lg border border-white/10 bg-black/60 px-2.5 py-1 text-[11px] font-medium text-foreground shadow-[0_10px_30px_rgba(0,0,0,0.45)] backdrop-blur-lg">
+    <div className="pointer-events-auto flex items-center gap-1.5 rounded-md border border-white/10 bg-[#111621]/88 px-2.5 py-1 text-[11px] font-medium text-foreground shadow-[0_6px_20px_rgba(0,0,0,0.35)] backdrop-blur-sm">
       {children}
     </div>
   );
@@ -152,7 +170,7 @@ function AgentDetailPanel({
     <>
       <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
         <div className="flex items-center gap-3">
-          <div className="flex size-9 items-center justify-center rounded-lg bg-primary/15">
+          <div className="flex size-8 items-center justify-center rounded-md bg-primary/12">
             {agent.node_type === "steward" ? (
               <Shield className="size-4 text-primary" />
             ) : agent.node_type === "conductor" ? (
@@ -178,7 +196,7 @@ function AgentDetailPanel({
       </div>
 
       <div className="flex-1 space-y-3 overflow-y-auto p-4">
-        <div className="rounded-xl border border-white/10 bg-black/45 p-3">
+        <div className="rounded-lg border border-white/10 bg-[#141925] p-3">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             Status
           </p>
@@ -189,7 +207,7 @@ function AgentDetailPanel({
           </div>
         </div>
 
-        <div className="rounded-xl border border-white/10 bg-black/45 p-3">
+        <div className="rounded-lg border border-white/10 bg-[#141925] p-3">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             Connections
           </p>
@@ -198,7 +216,7 @@ function AgentDetailPanel({
           </p>
         </div>
 
-        <div className="rounded-xl border border-white/10 bg-black/45 p-3">
+        <div className="rounded-lg border border-white/10 bg-[#141925] p-3">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             Todos
           </p>
@@ -239,10 +257,12 @@ function StewardChatPanel() {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const messageCount = stewardMessages.length;
 
   useEffect(() => {
+    if (messageCount < 0) return;
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  });
+  }, [messageCount]);
 
   const sendMessage = async () => {
     const content = input.trim();
@@ -270,7 +290,7 @@ function StewardChatPanel() {
   return (
     <>
       <div className="flex items-center gap-3 border-b border-white/10 px-4 py-3">
-        <div className="flex size-9 items-center justify-center rounded-lg bg-primary/15">
+        <div className="flex size-8 items-center justify-center rounded-md bg-primary/12">
           <Shield className="size-4 text-primary" />
         </div>
         <div className="flex-1">
@@ -283,8 +303,8 @@ function StewardChatPanel() {
 
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
         {stewardMessages.length === 0 && (
-          <div className="flex h-full flex-col items-center justify-center space-y-3 rounded-xl border border-dashed border-white/15 bg-black/45 p-4 text-center">
-            <div className="flex size-12 items-center justify-center rounded-2xl bg-white/10">
+          <div className="flex h-full flex-col items-center justify-center space-y-3 rounded-lg border border-dashed border-white/15 bg-[#141925] p-4 text-center">
+            <div className="flex size-11 items-center justify-center rounded-md bg-white/10">
               <MessageSquare className="size-5 text-primary" />
             </div>
             <div className="space-y-1">
@@ -305,13 +325,13 @@ function StewardChatPanel() {
             {msg.from === "steward" && (
               <div className="flex max-w-[85%] items-start gap-2">
                 <Shield className="mt-1 size-4 shrink-0 text-primary" />
-                <div className="rounded-xl border border-white/10 bg-black/55 px-3 py-2 text-sm text-foreground">
+                <div className="rounded-md border border-white/10 bg-[#141925] px-3 py-2 text-sm text-foreground">
                   <MarkdownContent content={msg.content} />
                 </div>
               </div>
             )}
             {msg.from === "human" && (
-              <div className="max-w-[85%] rounded-xl bg-primary px-3 py-2 text-sm text-primary-foreground shadow-[0_10px_30px_rgba(0,0,0,0.3)]">
+              <div className="max-w-[85%] rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground shadow-[0_8px_24px_rgba(0,0,0,0.28)]">
                 {msg.content}
               </div>
             )}
@@ -328,13 +348,13 @@ function StewardChatPanel() {
             onKeyDown={handleKeyDown}
             placeholder="Message the Steward..."
             rows={1}
-            className="min-h-[40px] flex-1 resize-none rounded-lg border border-white/10 bg-black/50 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+            className="min-h-[40px] flex-1 resize-none rounded-md border border-white/10 bg-[#141925] px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
           />
           <button
             type="button"
             onClick={sendMessage}
             disabled={!input.trim() || sending}
-            className="flex size-10 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-lg transition-all hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex size-10 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-lg transition-all hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Send className="size-4" />
           </button>

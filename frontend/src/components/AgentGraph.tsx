@@ -41,9 +41,9 @@ function AnimatedMessageEdge(props: EdgeProps) {
         path={edgePath}
         style={{
           stroke: hasActiveMessage
-            ? "rgba(56,189,248,0.82)"
-            : "rgba(148,163,184,0.22)",
-          strokeWidth: hasActiveMessage ? 2.5 : 1.5,
+            ? "rgba(129,161,255,0.62)"
+            : "rgba(148,163,184,0.18)",
+          strokeWidth: hasActiveMessage ? 2.2 : 1.2,
         }}
       />
       {hasActiveMessage && (
@@ -55,7 +55,7 @@ function AnimatedMessageEdge(props: EdgeProps) {
             strokeWidth="3"
             strokeLinecap="round"
             strokeDasharray="8 6"
-            opacity="0.9"
+            opacity="0.8"
           >
             <animate
               attributeName="stroke-dashoffset"
@@ -65,7 +65,7 @@ function AnimatedMessageEdge(props: EdgeProps) {
               repeatCount="indefinite"
             />
           </path>
-          <circle r="3" fill="#38bdf8" filter="url(#glow)">
+          <circle r="2.6" fill="#8ba2ff">
             <animateMotion
               dur="0.5s"
               repeatCount="indefinite"
@@ -94,7 +94,7 @@ interface ContextMenuState {
   agentId: string | null;
 }
 
-export function AgentTree() {
+export function AgentGraph() {
   const {
     agents,
     selectedAgentId,
@@ -149,9 +149,9 @@ export function AgentTree() {
             data: { active: isActive },
             style: {
               stroke: isActive
-                ? "rgba(56,189,248,0.82)"
-                : "rgba(148,163,184,0.22)",
-              strokeWidth: isActive ? 2.5 : 1.5,
+                ? "rgba(129,161,255,0.62)"
+                : "rgba(148,163,184,0.18)",
+              strokeWidth: isActive ? 2.2 : 1.2,
             },
             animated: false,
           });
@@ -297,13 +297,13 @@ export function AgentTree() {
             maxZoom={1.8}
             className="bg-transparent"
           >
-            <Background color="rgba(90,90,96,0.18)" gap={30} size={1} />
+            <Background color="rgba(125,125,135,0.12)" gap={30} size={1} />
             <MiniMap
               zoomable
               pannable
-              className="!rounded-lg !border !border-white/10 !bg-black/80 !shadow-[0_15px_35px_rgba(0,0,0,0.55)]"
-              maskColor="rgba(0,0,0,0.55)"
-              nodeColor="rgba(56,189,248,0.82)"
+              className="!rounded-md !border !border-white/10 !bg-[#101520] !shadow-[0_10px_24px_rgba(0,0,0,0.4)]"
+              maskColor="rgba(8,10,16,0.68)"
+              nodeColor="rgba(129,161,255,0.7)"
             />
             <svg aria-hidden="true" focusable="false">
               <defs>
@@ -314,17 +314,10 @@ export function AgentTree() {
                   x2="1"
                   y2="0"
                 >
-                  <stop offset="0%" stopColor="#0ea5e9" stopOpacity="0.2" />
-                  <stop offset="50%" stopColor="#38bdf8" stopOpacity="1" />
-                  <stop offset="100%" stopColor="#0ea5e9" stopOpacity="0.2" />
+                  <stop offset="0%" stopColor="#6a7de8" stopOpacity="0.18" />
+                  <stop offset="50%" stopColor="#8ba2ff" stopOpacity="0.95" />
+                  <stop offset="100%" stopColor="#6a7de8" stopOpacity="0.18" />
                 </linearGradient>
-                <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-                  <feGaussianBlur stdDeviation="3" result="blur" />
-                  <feMerge>
-                    <feMergeNode in="blur" />
-                    <feMergeNode in="SourceGraphic" />
-                  </feMerge>
-                </filter>
               </defs>
             </svg>
           </ReactFlow>
@@ -338,7 +331,7 @@ export function AgentTree() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 2, scale: 0.98 }}
             transition={{ duration: 0.15 }}
-            className="pointer-events-none fixed z-[100] rounded-xl border border-white/10 bg-black/85 px-3 py-2 shadow-xl backdrop-blur-md"
+            className="pointer-events-none fixed z-[100] rounded-md border border-white/10 bg-[#121722]/95 px-3 py-2 shadow-xl backdrop-blur-sm"
             style={{ left: tooltip.x + 12, top: tooltip.y + 12 }}
           >
             <div className="flex items-center gap-2">

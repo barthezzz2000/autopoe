@@ -36,21 +36,25 @@ function AppContent() {
 
   return (
     <div className="relative h-screen overflow-hidden bg-background">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(71,85,105,0.22),transparent_58%),radial-gradient(ellipse_at_bottom,rgba(14,116,144,0.14),transparent_62%)]" />
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(2,6,23,0.35),rgba(2,6,23,0.86))]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(30,64,175,0.08),transparent_52%),radial-gradient(ellipse_at_bottom_right,rgba(15,23,42,0.35),transparent_58%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(9,10,16,0.18),rgba(5,6,10,0.92))]" />
 
       {!isWorkspace && <Sidebar />}
 
       {isWorkspace && (
         <>
-          <div
+          <button
+            type="button"
+            aria-label="Reveal navigation"
             className="absolute inset-y-0 left-0 z-30 w-4"
             onMouseEnter={() => setWorkspaceSidebarOpen(true)}
+            onFocus={() => setWorkspaceSidebarOpen(true)}
           />
 
           <button
+            type="button"
             onClick={() => setWorkspaceSidebarOpen((prev) => !prev)}
-            className="absolute left-4 top-4 z-40 flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-black/60 text-muted-foreground shadow-[0_10px_30px_rgba(0,0,0,0.55)] backdrop-blur-lg transition-colors hover:text-foreground"
+            className="absolute left-4 top-4 z-40 flex h-9 w-9 items-center justify-center rounded-md border border-white/10 bg-[#10131a]/88 text-muted-foreground shadow-[0_8px_24px_rgba(0,0,0,0.45)] backdrop-blur-sm transition-colors hover:bg-[#161a24] hover:text-foreground"
             title={workspaceSidebarOpen ? "Hide navigation" : "Show navigation"}
           >
             {workspaceSidebarOpen ? (
@@ -66,7 +70,7 @@ function AppContent() {
                 initial={{ x: -280, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ x: -280, opacity: 0 }}
-                transition={{ type: "spring", stiffness: 320, damping: 28 }}
+                transition={{ type: "spring", stiffness: 380, damping: 30 }}
                 onMouseLeave={() => setWorkspaceSidebarOpen(false)}
                 className="absolute left-4 top-16 z-40 h-[calc(100%-1.75rem)]"
               >
@@ -82,7 +86,7 @@ function AppContent() {
 
       <main
         className={cn(
-          "relative z-10 h-full p-3",
+          "relative z-10 h-full p-2.5",
           isWorkspace ? "ml-0" : "ml-72",
         )}
       >
@@ -90,8 +94,8 @@ function AppContent() {
           className={cn(
             "h-full overflow-hidden border shadow-2xl",
             isWorkspace
-              ? "rounded-[1.75rem] border-white/10 bg-black/65 shadow-[0_40px_120px_rgba(0,0,0,0.65)]"
-              : "rounded-2xl border-border/60 bg-card/50",
+              ? "rounded-xl border-white/10 bg-[#0c0f16]/88 shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
+              : "rounded-xl border-white/10 bg-[#10131a]/78 shadow-[0_18px_60px_rgba(0,0,0,0.4)]",
           )}
         >
           <ThemeAwareToaster />
@@ -110,7 +114,7 @@ function ThemeAwareToaster() {
       position="bottom-right"
       toastOptions={{
         className:
-          "rounded-xl border border-border bg-card text-foreground shadow-xl",
+          "rounded-md border border-border bg-[#121620] text-foreground shadow-xl",
       }}
     />
   );
