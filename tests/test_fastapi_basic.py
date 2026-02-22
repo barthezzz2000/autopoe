@@ -18,16 +18,16 @@ def test_health_check(client: TestClient):
 
 
 def test_list_agents(client: TestClient):
-    response = client.get("/api/agents")
+    response = client.get("/api/nodes")
 
     assert response.status_code == 200
     data = response.json()
-    assert "agents" in data
-    assert isinstance(data["agents"], list)
+    assert "nodes" in data
+    assert isinstance(data["nodes"], list)
 
 
 def test_get_agent_not_found(client: TestClient):
-    response = client.get("/api/agents/non-existent-id")
+    response = client.get("/api/nodes/non-existent-id")
 
     assert response.status_code == 404
-    assert "Agent not found" in response.json()["detail"]
+    assert "Node not found" in response.json()["detail"]
