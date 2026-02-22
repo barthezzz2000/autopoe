@@ -52,8 +52,6 @@ interface AgentContextValue {
   streamingDeltas: Map<string, StreamingDelta[]>;
   activeMessages: ActiveMessage[];
   activeToolCalls: Map<string, string>;
-  eventPanelVisible: boolean;
-  toggleEventPanel: () => void;
   stewardMessages: StewardMessage[];
   sendStewardMessage: (content: string) => Promise<void>;
   currentPage: PageId;
@@ -85,7 +83,6 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   const [activeToolCalls, setActiveToolCalls] = useState<Map<string, string>>(
     () => new Map(),
   );
-  const [eventPanelVisible, setEventPanelVisible] = useState(false);
   const [stewardMessages, setStewardMessages] = useState<StewardMessage[]>([]);
   const [currentPage, setCurrentPage] = useState<PageId>("graph");
   const msgTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(
@@ -331,10 +328,6 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  const toggleEventPanel = useCallback(() => {
-    setEventPanelVisible((prev) => !prev);
-  }, []);
-
   const value = useMemo(
     () => ({
       agents,
@@ -355,8 +348,6 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       streamingDeltas,
       activeMessages,
       activeToolCalls,
-      eventPanelVisible,
-      toggleEventPanel,
       stewardMessages,
       sendStewardMessage,
       currentPage,
@@ -380,8 +371,6 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       streamingDeltas,
       activeMessages,
       activeToolCalls,
-      eventPanelVisible,
-      toggleEventPanel,
       stewardMessages,
       sendStewardMessage,
       currentPage,

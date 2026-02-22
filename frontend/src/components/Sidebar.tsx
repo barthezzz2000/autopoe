@@ -1,11 +1,4 @@
-import {
-  Network,
-  Server,
-  BookOpen,
-  Wrench,
-  Settings,
-  PanelRight,
-} from "lucide-react";
+import { Network, Server, BookOpen, Wrench, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAgent, type PageId } from "@/context/AgentContext";
 
@@ -17,15 +10,7 @@ const NAV_ITEMS: Array<{ id: PageId; icon: typeof Network; label: string }> = [
   { id: "settings", icon: Settings, label: "Settings" },
 ];
 
-interface SidebarProps {
-  eventPanelVisible: boolean;
-  onToggleEventPanel: () => void;
-}
-
-export function Sidebar({
-  eventPanelVisible,
-  onToggleEventPanel,
-}: SidebarProps) {
+export function Sidebar() {
   const { currentPage, setCurrentPage } = useAgent();
 
   return (
@@ -56,21 +41,6 @@ export function Sidebar({
           </button>
         ))}
       </nav>
-
-      <div className="border-t border-zinc-800 p-3">
-        <button
-          onClick={onToggleEventPanel}
-          className={cn(
-            "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-            eventPanelVisible
-              ? "bg-zinc-700 text-zinc-100"
-              : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100",
-          )}
-        >
-          <PanelRight className="size-4 shrink-0" />
-          <span>{eventPanelVisible ? "Hide Event Log" : "Show Event Log"}</span>
-        </button>
-      </div>
     </aside>
   );
 }

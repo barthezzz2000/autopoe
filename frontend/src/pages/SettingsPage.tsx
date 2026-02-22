@@ -13,9 +13,6 @@ import { cn } from "@/lib/utils";
 import { providerTypeLabel } from "@/lib/providerTypes";
 
 interface UserSettings {
-  event_log: {
-    timestamp_format: string;
-  };
   model: {
     active_provider_id: string;
     active_model: string;
@@ -102,7 +99,7 @@ export function SettingsPage() {
     if (!settings) return;
     setSaving(true);
     try {
-      await saveSettings(settings);
+      await saveSettings({ model: settings.model });
       toast.success("Settings saved");
     } catch {
       toast.error("Failed to save settings");
@@ -125,7 +122,7 @@ export function SettingsPage() {
         <div>
           <h1 className="text-lg font-semibold text-zinc-100">Settings</h1>
           <p className="mt-1 text-sm text-zinc-500">
-            Manage active provider, model, and interface behavior.
+            Manage the active provider and model.
           </p>
         </div>
         <button
@@ -138,31 +135,7 @@ export function SettingsPage() {
         </button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <section className="rounded-xl border border-zinc-800 bg-zinc-900/70 p-4">
-          <h2 className="mb-3 text-sm font-medium text-zinc-200">Event Log</h2>
-          <label className="mb-1 block text-xs text-zinc-400">
-            Timestamp Format
-          </label>
-          <select
-            value={settings.event_log.timestamp_format}
-            onChange={(e) =>
-              setSettings({
-                ...settings,
-                event_log: {
-                  ...settings.event_log,
-                  timestamp_format: e.target.value,
-                },
-              })
-            }
-            className="w-full rounded border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-200"
-          >
-            <option value="relative">Relative (2m ago)</option>
-            <option value="absolute">Absolute (14:30:45)</option>
-            <option value="both">Both</option>
-          </select>
-        </section>
-
+      <div className="max-w-3xl">
         <section className="rounded-xl border border-zinc-800 bg-zinc-900/70 p-4">
           <h2 className="mb-3 text-sm font-medium text-zinc-200">
             Active Model

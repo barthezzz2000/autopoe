@@ -2,7 +2,6 @@ import "@/styles/App.css";
 import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AgentProvider, useAgent } from "@/context/AgentContext";
-import { EventLog } from "@/components/EventLog";
 import { Sidebar } from "@/components/Sidebar";
 import { HomePage } from "@/pages/HomePage";
 import { ProvidersPage } from "@/pages/ProvidersPage";
@@ -11,7 +10,7 @@ import { SettingsPage } from "@/pages/SettingsPage";
 import { ToolsPage } from "@/pages/ToolsPage";
 
 function AppContent() {
-  const { eventPanelVisible, toggleEventPanel, currentPage } = useAgent();
+  const { currentPage } = useAgent();
 
   const renderPage = () => {
     switch (currentPage) {
@@ -31,12 +30,8 @@ function AppContent() {
   return (
     <>
       <div className="flex h-screen bg-zinc-950 text-zinc-100">
-        <Sidebar
-          eventPanelVisible={eventPanelVisible}
-          onToggleEventPanel={toggleEventPanel}
-        />
+        <Sidebar />
         <div className="ml-64 flex-1">{renderPage()}</div>
-        <EventLog />
       </div>
       <Toaster
         theme="dark"
