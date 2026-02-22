@@ -1,8 +1,17 @@
 import { useEffect, useState } from "react";
-import { Check, Edit2, Plus, RefreshCw, Trash2, X } from "lucide-react";
+import {
+  BookOpen,
+  Check,
+  Edit2,
+  Plus,
+  RefreshCw,
+  Trash2,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { createRole, deleteRole, fetchRoles, updateRole } from "@/lib/api";
 import type { Role } from "@/types";
+import { cn } from "@/lib/utils";
 
 type RoleDraft = Omit<Role, "id">;
 
@@ -14,8 +23,8 @@ const emptyDraft = (): RoleDraft => ({
 export function RolesPage() {
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
-  const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
   const [draft, setDraft] = useState<RoleDraft>(emptyDraft());
   const [saving, setSaving] = useState(false);
 
@@ -35,25 +44,25 @@ export function RolesPage() {
     void refreshRoles();
   }, []);
 
-  const startCreate = () => {
-    setCreating(true);
+  const handleCreate = () => {
+    setIsCreating(true);
     setEditingId(null);
     setDraft(emptyDraft());
   };
 
-  const startEdit = (role: Role) => {
+  const handleEdit = (role: Role) => {
     setEditingId(role.id);
-    setCreating(false);
+    setIsCreating(false);
     setDraft({ name: role.name, system_prompt: role.system_prompt });
   };
 
-  const closeEditor = () => {
-    setCreating(false);
+  const handleCancel = () => {
+    setIsCreating(false);
     setEditingId(null);
     setDraft(emptyDraft());
   };
 
-  const submit = async () => {
+  const handleSave = async () => {
     if (!draft.name.trim()) {
       toast.error("Role name is required");
       return;
@@ -74,7 +83,7 @@ export function RolesPage() {
         setRoles((prev) => [created, ...prev]);
         toast.success("Role created");
       }
-      closeEditor();
+      handleCancel();
     } catch {
       toast.error("Failed to save role");
     } finally {
@@ -82,147 +91,186 @@ export function RolesPage() {
     }
   };
 
-  const remove = async (id: string) => {
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this role?")) return;
     try {
       await deleteRole(id);
       setRoles((prev) => prev.filter((r) => r.id !== id));
-      if (editingId === id) {
-        closeEditor();
-      }
+      if (editingId === id) handleCancel();
       toast.success("Role deleted");
     } catch {
       toast.error("Failed to delete role");
     }
   };
 
-  return (
-    <div className="flex h-full flex-col bg-zinc-950 p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-semibold text-zinc-100">Roles</h1>
-          <p className="mt-1 text-sm text-zinc-500">
-            Define reusable agent behaviors with clear system prompts.
-          </p>
-        </div>
+  const isEditing = Boolean(isCreating || editingId);
 
+  return (
+    <div className="flex h-full flex-col">
+      <div className="flex items-center justify-between border-b border-border/50 px-6 py-4">
+        <div className="flex items-center gap-3">
+          <BookOpen className="size-5 text-primary" />
+          <div>
+            <h1 className="text-lg font-semibold">Roles</h1>
+            <p className="text-sm text-muted-foreground">
+              Define reusable agent behaviors
+            </p>
+          </div>
+        </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => void refreshRoles()}
-            className="inline-flex items-center gap-1.5 rounded-md border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs text-zinc-200 hover:bg-zinc-700"
+            disabled={loading}
+            className="flex size-9 items-center justify-center rounded-lg border border-border/50 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
           >
-            <RefreshCw className="size-3.5" />
-            Refresh
+            <RefreshCw className={cn("size-4", loading && "animate-spin")} />
           </button>
           <button
-            onClick={startCreate}
-            className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-xs text-white hover:bg-blue-500"
+            onClick={handleCreate}
+            disabled={isEditing}
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 disabled:opacity-50"
           >
-            <Plus className="size-3.5" />
-            Add Role
+            <Plus className="size-4" />
+            New Role
           </button>
         </div>
       </div>
 
-      {(creating || editingId) && (
-        <section className="mb-5 rounded-xl border border-zinc-700 bg-zinc-900 p-4">
-          <h2 className="mb-3 text-sm font-medium text-zinc-200">
-            {editingId ? "Edit Role" : "Create Role"}
-          </h2>
+      <div className="flex-1 overflow-y-auto p-6">
+        {isEditing ? (
+          <div className="mx-auto max-w-3xl">
+            <div className="rounded-xl border border-border/50 bg-card p-6 shadow-lg">
+              <div className="mb-6 flex items-center justify-between">
+                <h2 className="text-xl font-semibold">
+                  {editingId ? "Edit Role" : "Create Role"}
+                </h2>
+                <button
+                  onClick={handleCancel}
+                  className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
 
-          <div className="space-y-3">
-            <div>
-              <label className="mb-1 block text-xs text-zinc-400">Name</label>
-              <input
-                value={draft.name}
-                onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-                className="w-full rounded border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-200"
-                placeholder="Planning Agent"
-              />
-            </div>
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Role Name</label>
+                  <input
+                    type="text"
+                    value={draft.name}
+                    onChange={(e) =>
+                      setDraft({ ...draft, name: e.target.value })
+                    }
+                    placeholder="e.g., Code Reviewer"
+                    className="w-full rounded-lg border border-border/50 bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
 
-            <div>
-              <label className="mb-1 block text-xs text-zinc-400">
-                System Prompt
-              </label>
-              <textarea
-                value={draft.system_prompt}
-                onChange={(e) =>
-                  setDraft({ ...draft, system_prompt: e.target.value })
-                }
-                rows={10}
-                className="w-full resize-y rounded border border-zinc-700 bg-zinc-800 px-3 py-2 font-mono text-sm text-zinc-200"
-                placeholder="You are a reliable assistant that..."
-              />
-            </div>
-          </div>
-
-          <div className="mt-4 flex items-center gap-2">
-            <button
-              onClick={() => void submit()}
-              disabled={saving}
-              className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-xs text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <Check className="size-3.5" />
-              {saving ? "Saving..." : "Save"}
-            </button>
-            <button
-              onClick={closeEditor}
-              disabled={saving}
-              className="inline-flex items-center gap-1.5 rounded-md border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs text-zinc-200 hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <X className="size-3.5" />
-              Cancel
-            </button>
-          </div>
-        </section>
-      )}
-
-      <div className="space-y-3 overflow-y-auto">
-        {loading ? (
-          <p className="py-8 text-center text-sm text-zinc-500">
-            Loading roles...
-          </p>
-        ) : roles.length === 0 ? (
-          <p className="py-8 text-center text-sm text-zinc-500">
-            No roles configured. Add one to use when spawning agents.
-          </p>
-        ) : (
-          roles.map((role) => (
-            <article
-              key={role.id}
-              className="rounded-xl border border-zinc-800 bg-zinc-900/70 p-4"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <h2 className="truncate text-sm font-medium text-zinc-100">
-                    {role.name}
-                  </h2>
-                  <p className="mt-2 line-clamp-4 whitespace-pre-wrap font-mono text-xs text-zinc-400">
-                    {role.system_prompt}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">System Prompt</label>
+                  <textarea
+                    value={draft.system_prompt}
+                    onChange={(e) =>
+                      setDraft({ ...draft, system_prompt: e.target.value })
+                    }
+                    placeholder="You are a helpful assistant that..."
+                    rows={12}
+                    className="w-full resize-y rounded-lg border border-border/50 bg-background px-3 py-2 font-mono text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    This prompt defines how agents with this role will behave.
                   </p>
                 </div>
 
-                <div className="flex items-center gap-1">
+                <div className="flex items-center justify-end gap-3 pt-4">
                   <button
-                    onClick={() => startEdit(role)}
-                    className="flex size-8 items-center justify-center rounded text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+                    onClick={handleCancel}
+                    disabled={saving}
+                    className="rounded-lg border border-border/50 px-4 py-2 text-sm font-medium transition-colors hover:bg-accent"
                   >
-                    <Edit2 className="size-3.5" />
+                    Cancel
                   </button>
                   <button
-                    onClick={() => void remove(role.id)}
-                    className="flex size-8 items-center justify-center rounded text-zinc-400 hover:bg-zinc-800 hover:text-red-400"
+                    onClick={() => void handleSave()}
+                    disabled={saving}
+                    className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 disabled:opacity-50"
                   >
-                    <Trash2 className="size-3.5" />
+                    <Check className="size-4" />
+                    {saving ? "Saving..." : "Save Role"}
                   </button>
                 </div>
               </div>
-
-              <p className="mt-3 text-[10px] font-mono text-zinc-600">
-                {role.id}
+            </div>
+          </div>
+        ) : loading ? (
+          <div className="flex h-full items-center justify-center">
+            <div className="text-center">
+              <RefreshCw className="mx-auto size-8 animate-spin text-primary/50" />
+              <p className="mt-2 text-sm text-muted-foreground">
+                Loading roles...
               </p>
-            </article>
-          ))
+            </div>
+          </div>
+        ) : roles.length === 0 ? (
+          <div className="flex h-full flex-col items-center justify-center text-center">
+            <div className="flex size-16 items-center justify-center rounded-2xl bg-accent">
+              <BookOpen className="size-8 text-primary/50" />
+            </div>
+            <h3 className="mt-4 text-lg font-semibold">No Roles Yet</h3>
+            <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+              Create your first role to define how agents should behave.
+            </p>
+            <button
+              onClick={handleCreate}
+              className="mt-4 flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:bg-primary/90"
+            >
+              <Plus className="size-4" />
+              Create Role
+            </button>
+          </div>
+        ) : (
+          <div className="mx-auto grid max-w-5xl gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {roles.map((role) => (
+              <div
+                key={role.id}
+                className="group relative rounded-xl border border-border/50 bg-card p-5 shadow-sm transition-all hover:border-border hover:shadow-md"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
+                      <BookOpen className="size-5 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="truncate font-semibold">{role.name}</h3>
+                      <p className="font-mono text-[10px] text-muted-foreground">
+                        {role.id.slice(0, 8)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                    <button
+                      onClick={() => handleEdit(role)}
+                      className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                    >
+                      <Edit2 className="size-3.5" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(role.id)}
+                      className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <p className="line-clamp-4 text-sm text-muted-foreground">
+                    {role.system_prompt}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>

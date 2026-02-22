@@ -1,13 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Check,
-  Edit2,
+  ChevronRight,
   Eye,
   EyeOff,
   Plus,
   RefreshCw,
+  Server,
   Trash2,
-  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -18,6 +18,7 @@ import {
 } from "@/lib/api";
 import { providerTypeLabel, providerTypeOptions } from "@/lib/providerTypes";
 import type { Provider } from "@/types";
+import { cn } from "@/lib/utils";
 
 type ProviderDraft = Omit<Provider, "id">;
 
@@ -31,23 +32,23 @@ const emptyDraft = (): ProviderDraft => ({
 export function ProvidersPage() {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
-  const [creating, setCreating] = useState(false);
-  const [createDraft, setCreateDraft] = useState<ProviderDraft>(emptyDraft());
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editDraft, setEditDraft] = useState<ProviderDraft>(emptyDraft());
-  const [showKeys, setShowKeys] = useState<Set<string>>(new Set());
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const [draft, setDraft] = useState<ProviderDraft>(emptyDraft());
   const [saving, setSaving] = useState(false);
+  const [showKey, setShowKey] = useState(false);
 
-  const editingProvider = useMemo(
-    () => providers.find((p) => p.id === editingId) ?? null,
-    [providers, editingId],
-  );
+  const selectedProvider = providers.find((p) => p.id === selectedId);
 
   const refreshProviders = async () => {
     setLoading(true);
     try {
       const items = await fetchProviders();
       setProviders(items);
+      if (selectedId && !items.find((p) => p.id === selectedId)) {
+        setSelectedId(null);
+        setIsCreating(false);
+      }
     } catch {
       toast.error("Failed to load providers");
     } finally {
@@ -59,90 +60,76 @@ export function ProvidersPage() {
     void refreshProviders();
   }, []);
 
-  const toggleShowKey = (id: string) => {
-    setShowKeys((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  };
-
-  const startCreate = () => {
-    setCreating(true);
-    setCreateDraft(emptyDraft());
-  };
-
-  const cancelCreate = () => {
-    setCreating(false);
-    setCreateDraft(emptyDraft());
-  };
-
-  const submitCreate = async () => {
-    if (!createDraft.name.trim()) {
-      toast.error("Provider name is required");
-      return;
-    }
-    setSaving(true);
-    try {
-      const created = await createProvider(createDraft);
-      setProviders((prev) => [created, ...prev]);
-      setCreating(false);
-      setCreateDraft(emptyDraft());
-      toast.success("Provider created");
-    } catch {
-      toast.error("Failed to create provider");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const startEdit = (provider: Provider) => {
-    setEditingId(provider.id);
-    setEditDraft({
+  const handleSelect = (provider: Provider) => {
+    setSelectedId(provider.id);
+    setIsCreating(false);
+    setDraft({
       name: provider.name,
       type: provider.type,
       base_url: provider.base_url,
       api_key: provider.api_key,
     });
+    setShowKey(false);
   };
 
-  const cancelEdit = () => {
-    setEditingId(null);
-    setEditDraft(emptyDraft());
+  const handleCreateNew = () => {
+    setIsCreating(true);
+    setSelectedId(null);
+    setDraft(emptyDraft());
+    setShowKey(false);
   };
 
-  const submitEdit = async () => {
-    if (!editingId) return;
-    if (!editDraft.name.trim()) {
+  const handleCancel = () => {
+    if (isCreating) {
+      setIsCreating(false);
+      setDraft(emptyDraft());
+    } else if (selectedProvider) {
+      setDraft({
+        name: selectedProvider.name,
+        type: selectedProvider.type,
+        base_url: selectedProvider.base_url,
+        api_key: selectedProvider.api_key,
+      });
+    }
+  };
+
+  const handleSave = async () => {
+    if (!draft.name.trim()) {
       toast.error("Provider name is required");
       return;
     }
     setSaving(true);
     try {
-      const updated = await updateProvider(editingId, editDraft);
-      setProviders((prev) =>
-        prev.map((p) => (p.id === editingId ? updated : p)),
-      );
-      setEditingId(null);
-      setEditDraft(emptyDraft());
-      toast.success("Provider updated");
+      if (isCreating) {
+        const created = await createProvider(draft);
+        setProviders((prev) => [...prev, created]);
+        setIsCreating(false);
+        setSelectedId(created.id);
+        toast.success("Provider created");
+      } else if (selectedId) {
+        const updated = await updateProvider(selectedId, draft);
+        setProviders((prev) =>
+          prev.map((p) => (p.id === selectedId ? updated : p)),
+        );
+        toast.success("Provider updated");
+      }
     } catch {
-      toast.error("Failed to update provider");
+      toast.error(
+        isCreating ? "Failed to create provider" : "Failed to update provider",
+      );
     } finally {
       setSaving(false);
     }
   };
 
-  const removeProvider = async (id: string) => {
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this provider?")) return;
     try {
       await deleteProvider(id);
       setProviders((prev) => prev.filter((p) => p.id !== id));
-      if (editingId === id) {
-        cancelEdit();
+      if (selectedId === id) {
+        setSelectedId(null);
+        setDraft(emptyDraft());
       }
       toast.success("Provider deleted");
     } catch {
@@ -150,224 +137,251 @@ export function ProvidersPage() {
     }
   };
 
+  const hasChanges = isCreating
+    ? draft.name !== "" || draft.base_url !== "" || draft.api_key !== ""
+    : selectedProvider
+      ? draft.name !== selectedProvider.name ||
+        draft.type !== selectedProvider.type ||
+        draft.base_url !== selectedProvider.base_url ||
+        draft.api_key !== selectedProvider.api_key
+      : false;
+
   return (
-    <div className="flex h-full flex-col bg-zinc-950 p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-semibold text-zinc-100">Providers</h1>
-          <p className="mt-1 text-sm text-zinc-500">
-            Add providers and update credentials directly from this page.
-          </p>
+    <div className="flex h-full">
+      <div className="flex w-[300px] flex-col border-r border-border/50 bg-card/30">
+        <div className="flex items-center justify-between border-b border-border/50 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <Server className="size-4 text-primary" />
+            <span className="font-semibold">Providers</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => void refreshProviders()}
+              disabled={loading}
+              className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+              title="Refresh"
+            >
+              <RefreshCw
+                className={cn("size-3.5", loading && "animate-spin")}
+              />
+            </button>
+            <button
+              onClick={handleCreateNew}
+              className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+              title="Add Provider"
+            >
+              <Plus className="size-3.5" />
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => void refreshProviders()}
-            className="inline-flex items-center gap-1.5 rounded-md border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs text-zinc-200 hover:bg-zinc-700"
-          >
-            <RefreshCw className="size-3.5" />
-            Refresh
-          </button>
-          <button
-            onClick={startCreate}
-            className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-xs text-white hover:bg-blue-500"
-          >
-            <Plus className="size-3.5" />
-            Add Provider
-          </button>
+
+        <div className="flex-1 overflow-y-auto p-2">
+          {loading ? (
+            <div className="py-8 text-center text-sm text-muted-foreground">
+              Loading...
+            </div>
+          ) : providers.length === 0 ? (
+            <div className="py-8 text-center">
+              <p className="text-sm text-muted-foreground">No providers</p>
+              <button
+                onClick={handleCreateNew}
+                className="mt-2 text-xs text-primary hover:underline"
+              >
+                Add your first provider
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {providers.map((provider) => (
+                <button
+                  key={provider.id}
+                  onClick={() => handleSelect(provider)}
+                  className={cn(
+                    "group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-all",
+                    selectedId === provider.id
+                      ? "bg-accent border-l-2 border-primary"
+                      : "hover:bg-accent/50 border-l-2 border-transparent",
+                  )}
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="truncate text-sm font-medium">
+                      {provider.name}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {providerTypeLabel(provider.type)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(provider.id);
+                      }}
+                      className="flex size-6 items-center justify-center rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="size-3" />
+                    </button>
+                    <ChevronRight className="size-4 text-muted-foreground" />
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      {creating && (
-        <ProviderEditor
-          title="Create Provider"
-          draft={createDraft}
-          onDraftChange={setCreateDraft}
-          onSave={() => void submitCreate()}
-          onCancel={cancelCreate}
-          saving={saving}
-        />
-      )}
-
-      {editingProvider && (
-        <ProviderEditor
-          title={`Edit ${editingProvider.name}`}
-          draft={editDraft}
-          onDraftChange={setEditDraft}
-          onSave={() => void submitEdit()}
-          onCancel={cancelEdit}
-          saving={saving}
-        />
-      )}
-
-      <div className="space-y-3 overflow-y-auto">
-        {loading ? (
-          <p className="py-8 text-center text-sm text-zinc-500">
-            Loading providers...
-          </p>
-        ) : providers.length === 0 ? (
-          <p className="py-8 text-center text-sm text-zinc-500">
-            No providers configured. Add one to get started.
-          </p>
-        ) : (
-          providers.map((provider) => (
-            <article
-              key={provider.id}
-              className="rounded-xl border border-zinc-800 bg-zinc-900/70 p-4"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <div className="mb-1 flex items-center gap-2">
-                    <h2 className="truncate text-sm font-medium text-zinc-100">
-                      {provider.name}
-                    </h2>
-                    <span className="rounded border border-zinc-700 bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-300">
-                      {providerTypeLabel(provider.type)}
-                    </span>
-                  </div>
-
-                  <p className="truncate text-xs text-zinc-500">
-                    {provider.base_url}
-                  </p>
-
-                  <div className="mt-2 flex items-center gap-1">
-                    <span className="text-xs font-mono text-zinc-500">
-                      {provider.api_key
-                        ? showKeys.has(provider.id)
-                          ? provider.api_key
-                          : `••••••••${provider.api_key.slice(-4)}`
-                        : "No API key"}
-                    </span>
-                    {provider.api_key && (
-                      <button
-                        onClick={() => toggleShowKey(provider.id)}
-                        className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
-                      >
-                        {showKeys.has(provider.id) ? (
-                          <EyeOff className="size-3" />
-                        ) : (
-                          <Eye className="size-3" />
-                        )}
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => startEdit(provider)}
-                    className="flex size-8 items-center justify-center rounded text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
-                  >
-                    <Edit2 className="size-3.5" />
-                  </button>
-                  <button
-                    onClick={() => void removeProvider(provider.id)}
-                    className="flex size-8 items-center justify-center rounded text-zinc-400 hover:bg-zinc-800 hover:text-red-400"
-                  >
-                    <Trash2 className="size-3.5" />
-                  </button>
-                </div>
+      <div className="flex-1 bg-card/20">
+        {isCreating || selectedProvider ? (
+          <div className="flex h-full flex-col">
+            <div className="flex items-center justify-between border-b border-border/50 px-6 py-4">
+              <div>
+                <h2 className="text-lg font-semibold">
+                  {isCreating ? "New Provider" : selectedProvider?.name}
+                </h2>{" "}
+                <p className="text-sm text-muted-foreground">
+                  {isCreating
+                    ? "Configure a new LLM provider"
+                    : `ID: ${selectedProvider?.id}`}
+                </p>
               </div>
+              <div className="flex items-center gap-2">
+                {hasChanges && (
+                  <>
+                    <button
+                      onClick={handleCancel}
+                      disabled={saving}
+                      className="rounded-md border border-border/50 bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => void handleSave()}
+                      disabled={saving}
+                      className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 disabled:opacity-50"
+                    >
+                      <Check className="size-4" />
+                      {saving ? "Saving..." : "Save"}
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
 
-              <p className="mt-3 text-[10px] font-mono text-zinc-600">
-                {provider.id}
-              </p>
-            </article>
-          ))
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="mx-auto max-w-xl space-y-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Provider Name</label>
+                  <input
+                    type="text"
+                    value={draft.name}
+                    onChange={(e) =>
+                      setDraft({ ...draft, name: e.target.value })
+                    }
+                    placeholder="e.g., OpenAI Production"
+                    className="w-full rounded-lg border border-border/50 bg-card px-3 py-2 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Provider Type</label>
+                  <select
+                    value={draft.type}
+                    onChange={(e) =>
+                      setDraft({ ...draft, type: e.target.value })
+                    }
+                    className="w-full rounded-lg border border-border/50 bg-card px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                  >
+                    {providerTypeOptions.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-muted-foreground">
+                    {draft.type === "openai_compatible"
+                      ? "Any OpenAI-compatible API endpoint"
+                      : draft.type === "anthropic"
+                        ? "Anthropic Claude API"
+                        : "Google Gemini API"}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Base URL</label>
+                  <input
+                    type="text"
+                    value={draft.base_url}
+                    onChange={(e) =>
+                      setDraft({ ...draft, base_url: e.target.value })
+                    }
+                    placeholder="https://api.openai.com/v1"
+                    className="w-full rounded-lg border border-border/50 bg-card px-3 py-2 text-sm font-mono placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">API Key</label>
+                  <div className="relative">
+                    <input
+                      type={showKey ? "text" : "password"}
+                      value={draft.api_key}
+                      onChange={(e) =>
+                        setDraft({ ...draft, api_key: e.target.value })
+                      }
+                      placeholder="sk-..."
+                      className="w-full rounded-lg border border-border/50 bg-card px-3 py-2 pr-10 text-sm font-mono placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowKey(!showKey)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:text-foreground"
+                    >
+                      {showKey ? (
+                        <EyeOff className="size-4" />
+                      ) : (
+                        <Eye className="size-4" />
+                      )}
+                    </button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Your API key is encrypted and stored securely.
+                  </p>
+                </div>
+
+                {!isCreating && selectedProvider && (
+                  <div className="pt-6 border-t border-border/50">
+                    <button
+                      onClick={() => handleDelete(selectedProvider.id)}
+                      className="flex items-center gap-2 rounded-md border border-destructive/50 px-4 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
+                    >
+                      <Trash2 className="size-4" />
+                      Delete Provider
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="flex h-full flex-col items-center justify-center text-center">
+            <div className="flex size-16 items-center justify-center rounded-2xl bg-accent">
+              <Server className="size-8 text-primary/50" />
+            </div>
+            <h3 className="mt-4 text-lg font-semibold">No Provider Selected</h3>
+            <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+              Select a provider from the list to edit, or create a new one to
+              get started.
+            </p>
+            <button
+              onClick={handleCreateNew}
+              className="mt-4 flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:bg-primary/90"
+            >
+              <Plus className="size-4" />
+              Add Provider
+            </button>
+          </div>
         )}
       </div>
     </div>
-  );
-}
-
-function ProviderEditor({
-  title,
-  draft,
-  onDraftChange,
-  onSave,
-  onCancel,
-  saving,
-}: {
-  title: string;
-  draft: ProviderDraft;
-  onDraftChange: (next: ProviderDraft) => void;
-  onSave: () => void;
-  onCancel: () => void;
-  saving: boolean;
-}) {
-  return (
-    <section className="mb-5 rounded-xl border border-zinc-700 bg-zinc-900 p-4">
-      <h2 className="mb-3 text-sm font-medium text-zinc-200">{title}</h2>
-
-      <div className="grid gap-3 md:grid-cols-2">
-        <div>
-          <label className="mb-1 block text-xs text-zinc-400">Name</label>
-          <input
-            value={draft.name}
-            onChange={(e) => onDraftChange({ ...draft, name: e.target.value })}
-            className="w-full rounded border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-200"
-            placeholder="My Provider"
-          />
-        </div>
-
-        <div>
-          <label className="mb-1 block text-xs text-zinc-400">Type</label>
-          <select
-            value={draft.type}
-            onChange={(e) => onDraftChange({ ...draft, type: e.target.value })}
-            className="w-full rounded border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-200"
-          >
-            {providerTypeOptions.map((item) => (
-              <option key={item.value} value={item.value}>
-                {item.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="md:col-span-2">
-          <label className="mb-1 block text-xs text-zinc-400">Base URL</label>
-          <input
-            value={draft.base_url}
-            onChange={(e) =>
-              onDraftChange({ ...draft, base_url: e.target.value })
-            }
-            className="w-full rounded border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-200"
-            placeholder="https://api.example.com/v1"
-          />
-        </div>
-
-        <div className="md:col-span-2">
-          <label className="mb-1 block text-xs text-zinc-400">API Key</label>
-          <input
-            type="password"
-            value={draft.api_key}
-            onChange={(e) =>
-              onDraftChange({ ...draft, api_key: e.target.value })
-            }
-            className="w-full rounded border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-200"
-            placeholder="sk-..."
-          />
-        </div>
-      </div>
-
-      <div className="mt-4 flex items-center gap-2">
-        <button
-          onClick={onSave}
-          disabled={saving}
-          className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-xs text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          <Check className="size-3.5" />
-          {saving ? "Saving..." : "Save"}
-        </button>
-        <button
-          onClick={onCancel}
-          disabled={saving}
-          className="inline-flex items-center gap-1.5 rounded-md border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs text-zinc-200 hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          <X className="size-3.5" />
-          Cancel
-        </button>
-      </div>
-    </section>
   );
 }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { RefreshCw, Save } from "lucide-react";
+import { Loader2, RefreshCw, Save, Settings } from "lucide-react";
 import { toast } from "sonner";
 import {
   fetchProviderModels,
@@ -110,120 +110,148 @@ export function SettingsPage() {
 
   if (loading || !settings) {
     return (
-      <div className="flex h-full items-center justify-center bg-zinc-950 text-zinc-400">
-        Loading settings...
+      <div className="flex h-full items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="mx-auto size-8 animate-spin text-primary/50" />
+          <p className="mt-2 text-sm text-muted-foreground">
+            Loading settings...
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-full flex-col bg-zinc-950 p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-semibold text-zinc-100">Settings</h1>
-          <p className="mt-1 text-sm text-zinc-500">
-            Manage the active provider and model.
-          </p>
+    <div className="flex h-full flex-col">
+      <div className="flex items-center justify-between border-b border-border/50 px-6 py-4">
+        <div className="flex items-center gap-3">
+          <Settings className="size-5 text-primary" />
+          <div>
+            <h1 className="text-lg font-semibold">Settings</h1>
+            <p className="text-sm text-muted-foreground">
+              Configure your AI model preferences
+            </p>
+          </div>
         </div>
         <button
-          onClick={handleSave}
+          onClick={() => void handleSave()}
           disabled={saving}
-          className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-3 py-2 text-sm text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 disabled:opacity-50"
         >
           <Save className="size-4" />
-          {saving ? "Saving..." : "Save Settings"}
+          {saving ? "Saving..." : "Save Changes"}
         </button>
       </div>
 
-      <div className="max-w-3xl">
-        <section className="rounded-xl border border-zinc-800 bg-zinc-900/70 p-4">
-          <h2 className="mb-3 text-sm font-medium text-zinc-200">
-            Active Model
-          </h2>
+      <div className="flex-1 overflow-y-auto p-6">
+        <div className="mx-auto max-w-2xl space-y-6">
+          <div className="rounded-xl border border-border/50 bg-card p-6 shadow-lg">
+            <h2 className="mb-4 text-lg font-semibold">Model Configuration</h2>
 
-          <label className="mb-1 block text-xs text-zinc-400">Provider</label>
-          <select
-            value={settings.model.active_provider_id}
-            onChange={(e) =>
-              setSettings({
-                ...settings,
-                model: {
-                  ...settings.model,
-                  active_provider_id: e.target.value,
-                  active_model: "",
-                },
-              })
-            }
-            className="mb-3 w-full rounded border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-200"
-          >
-            <option value="">Select a provider</option>
-            {providers.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name} ({providerTypeLabel(p.type)})
-              </option>
-            ))}
-          </select>
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Active Provider</label>
+                <select
+                  value={settings.model.active_provider_id}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      model: {
+                        ...settings.model,
+                        active_provider_id: e.target.value,
+                        active_model: "",
+                      },
+                    })
+                  }
+                  className="w-full rounded-lg border border-border/50 bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                >
+                  <option value="">Select a provider</option>
+                  {providers.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} ({providerTypeLabel(p.type)})
+                    </option>
+                  ))}
+                </select>
+                {activeProvider && (
+                  <p className="text-xs text-muted-foreground">
+                    Using {activeProvider.name} ({activeProvider.base_url})
+                  </p>
+                )}
+              </div>
 
-          <div className="mb-1 flex items-center justify-between">
-            <label className="text-xs text-zinc-400">Model</label>
-            <button
-              onClick={refreshModels}
-              disabled={!settings.model.active_provider_id || loadingModels}
-              className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <RefreshCw
-                className={cn("size-3", loadingModels && "animate-spin")}
-              />
-              Refresh
-            </button>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Model</label>
+                  <button
+                    onClick={refreshModels}
+                    disabled={
+                      !settings.model.active_provider_id || loadingModels
+                    }
+                    className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:opacity-50"
+                  >
+                    <RefreshCw
+                      className={cn("size-3", loadingModels && "animate-spin")}
+                    />
+                    Refresh
+                  </button>
+                </div>
+
+                {models.length > 0 ? (
+                  <select
+                    value={settings.model.active_model}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        model: {
+                          ...settings.model,
+                          active_model: e.target.value,
+                        },
+                      })
+                    }
+                    className="w-full rounded-lg border border-border/50 bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                  >
+                    <option value="">Select a model</option>
+                    {models.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.id}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    value={settings.model.active_model}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        model: {
+                          ...settings.model,
+                          active_model: e.target.value,
+                        },
+                      })
+                    }
+                    placeholder={
+                      loadingModels
+                        ? "Loading models..."
+                        : "Enter model ID manually"
+                    }
+                    className="w-full rounded-lg border border-border/50 bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                )}
+              </div>
+            </div>
           </div>
 
-          {models.length > 0 ? (
-            <select
-              value={settings.model.active_model}
-              onChange={(e) =>
-                setSettings({
-                  ...settings,
-                  model: {
-                    ...settings.model,
-                    active_model: e.target.value,
-                  },
-                })
-              }
-              className="w-full rounded border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-200"
-            >
-              <option value="">Select a model</option>
-              {models.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.id}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <input
-              value={settings.model.active_model}
-              onChange={(e) =>
-                setSettings({
-                  ...settings,
-                  model: {
-                    ...settings.model,
-                    active_model: e.target.value,
-                  },
-                })
-              }
-              className="w-full rounded border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-200"
-              placeholder={
-                loadingModels ? "Loading models..." : "Enter model id manually"
-              }
-            />
-          )}
-
-          <p className="mt-3 text-xs text-zinc-500">
-            {activeProvider
-              ? `Current provider: ${activeProvider.name}`
-              : "Select a provider first."}
-          </p>
-        </section>
+          <div className="rounded-xl border border-border/50 bg-card/50 p-4">
+            <h3 className="mb-2 text-sm font-semibold">About</h3>
+            <p className="text-sm text-muted-foreground">
+              Autopoe Agent Studio v0.1.0
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              A multi-agent collaboration framework.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

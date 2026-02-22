@@ -1,4 +1,5 @@
 import { Handle, Position, type NodeProps } from "@xyflow/react";
+import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import {
   nodeTypeIcon,
@@ -24,71 +25,102 @@ export function AgentGraphNode({ data }: NodeProps) {
   const Icon = nodeTypeIcon[node_type];
 
   const isToolActive = !!toolCall;
+  const isRunning = state === "running";
 
   const baseBorder = isToolActive
-    ? "border-amber-400/70 tool-call-pulse"
+    ? "border-amber-500/80"
     : node_type === "steward" || node_type === "conductor"
       ? nodeTypeBorder[node_type]
       : stateBorder[state];
 
+  const nodeColors = {
+    steward: "from-indigo-500/20 to-violet-500/10",
+    conductor: "from-violet-500/20 to-purple-500/10",
+    agent: "from-slate-500/10 to-slate-600/5",
+  };
+
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.3, ease: [0.175, 0.885, 0.32, 1.275] }}
       className={cn(
-        "relative flex items-center gap-2 rounded-lg border bg-zinc-900 px-3 py-2 transition-colors",
+        "relative flex min-w-[200px] items-center gap-3 rounded-xl border-2 px-4 py-3",
+        "bg-gradient-to-br shadow-2xl",
+        nodeColors[node_type],
         baseBorder,
         selected
-          ? "ring-2 ring-blue-500 border-blue-500/60"
-          : !isToolActive && "hover:border-zinc-600",
-        state === "terminated" && "opacity-50",
+          ? "border-primary shadow-[0_0_30px_-5px_rgba(99,102,241,0.5)]"
+          : "border-border/60 hover:border-border",
+        isRunning && "shadow-[0_0_20px_-5px_rgba(34,197,94,0.3)]",
+        state === "terminated" && "opacity-40 grayscale",
       )}
     >
       <Handle
         type="target"
         position={Position.Top}
-        className="!bg-zinc-600 !w-2 !h-2 !border-0"
+        className="!size-3 !border-2 !border-card !bg-muted-foreground"
       />
-      <Icon
+
+      <div
         className={cn(
-          "size-4 shrink-0",
+          "flex size-10 shrink-0 items-center justify-center rounded-lg",
+          "bg-gradient-to-br shadow-inner",
           node_type === "steward"
-            ? "text-amber-400"
+            ? "from-indigo-500/30 to-indigo-600/20 text-indigo-300"
             : node_type === "conductor"
-              ? "text-purple-400"
-              : "text-zinc-400",
+              ? "from-violet-500/30 to-violet-600/20 text-violet-300"
+              : "from-slate-500/20 to-slate-600/10 text-slate-400",
         )}
-      />
-      <div className="flex flex-col min-w-0">
-        <span className="text-xs font-medium text-zinc-200 truncate">
+      >
+        <Icon className="size-5" />
+      </div>
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <span className="truncate text-sm font-semibold text-foreground">
           {name ?? <span className="capitalize">{node_type}</span>}
         </span>
-        <span className="text-[10px] text-zinc-500 font-mono">{shortId}</span>
-      </div>
-      <span className="relative flex size-2 shrink-0 ml-auto">
-        <span
-          className={cn(
-            "absolute inline-flex size-full rounded-full",
-            isToolActive ? "bg-amber-400" : stateColor[state],
-            (state === "running" || isToolActive) && "animate-ping opacity-75",
-            state === "idle" && !isToolActive && "idle-breathe",
-          )}
-        />
-        <span
-          className={cn(
-            "relative inline-flex size-2 rounded-full",
-            isToolActive ? "bg-amber-400" : stateColor[state],
-          )}
-        />
-      </span>
-      {isToolActive && (
-        <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-amber-900/80 px-1.5 py-0.5 text-[9px] text-amber-200 font-mono">
-          {toolCall}
+        <span className="font-mono text-[10px] text-muted-foreground">
+          {shortId}
         </span>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <span className="relative flex size-3">
+          {(isRunning || isToolActive) && (
+            <span
+              className={cn(
+                "absolute inline-flex size-full animate-ping rounded-full opacity-40",
+                isToolActive ? "bg-amber-400" : stateColor[state],
+              )}
+            />
+          )}
+          <span
+            className={cn(
+              "relative inline-flex size-3 rounded-full border-2 border-card shadow-sm",
+              isToolActive ? "bg-amber-500" : stateColor[state],
+            )}
+          />
+        </span>
+      </div>
+
+      {isToolActive && (
+        <motion.div
+          initial={{ opacity: 0, y: 5 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="absolute -bottom-7 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap"
+        >
+          <span className="rounded-md border border-amber-500/30 bg-amber-950/80 px-2 py-1 text-[10px] font-mono text-amber-300 shadow-lg backdrop-blur-sm">
+            ⚡ {toolCall}
+          </span>
+        </motion.div>
       )}
+
       <Handle
         type="source"
         position={Position.Bottom}
-        className="!bg-zinc-600 !w-2 !h-2 !border-0"
+        className="!size-3 !border-2 !border-card !bg-muted-foreground"
       />
-    </div>
+    </motion.div>
   );
 }

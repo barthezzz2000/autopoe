@@ -1,5 +1,5 @@
 import { Bot, Shield, Wand2 } from "lucide-react";
-import type { AgentState, NodeType } from "@/types";
+import { type AgentState, type NodeType } from "@/types";
 
 export const nodeTypeIcon = {
   steward: Shield,
@@ -9,30 +9,34 @@ export const nodeTypeIcon = {
 
 export const stateColor: Record<AgentState, string> = {
   running: "bg-emerald-400",
-  idle: "bg-blue-400",
+  idle: "bg-sky-400",
   initializing: "bg-amber-400",
-  error: "bg-red-400",
-  terminated: "bg-zinc-500",
+  error: "bg-rose-400",
+  terminated: "bg-slate-400",
 };
 
 export const stateBadgeColor: Record<AgentState, string> = {
-  running: "bg-emerald-400/20 text-emerald-300 border-emerald-500/30",
-  idle: "bg-blue-400/20 text-blue-300 border-blue-500/30",
-  initializing: "bg-amber-400/20 text-amber-300 border-amber-500/30",
-  error: "bg-red-400/20 text-red-300 border-red-500/30",
-  terminated: "bg-zinc-400/20 text-zinc-300 border-zinc-500/30",
+  running:
+    "bg-emerald-100/80 text-emerald-700 border-emerald-200 dark:bg-emerald-900/50 dark:text-emerald-300 dark:border-emerald-800",
+  idle: "bg-sky-100/80 text-sky-700 border-sky-200 dark:bg-sky-900/50 dark:text-sky-300 dark:border-sky-800",
+  initializing:
+    "bg-amber-100/80 text-amber-700 border-amber-200 dark:bg-amber-900/50 dark:text-amber-300 dark:border-amber-800",
+  error:
+    "bg-rose-100/80 text-rose-700 border-rose-200 dark:bg-rose-900/50 dark:text-rose-300 dark:border-rose-800",
+  terminated:
+    "bg-slate-100/80 text-slate-600 border-slate-200 dark:bg-slate-800/50 dark:text-slate-400 dark:border-slate-700",
 };
 
 export const stateBorder: Record<AgentState, string> = {
-  running: "border-emerald-500/50",
-  idle: "border-blue-500/50",
-  initializing: "border-amber-500/50",
-  error: "border-red-500/50",
-  terminated: "border-zinc-600/50",
+  running: "border-emerald-300/80",
+  idle: "border-sky-300/80",
+  initializing: "border-amber-300/80",
+  error: "border-rose-300/80",
+  terminated: "border-slate-300/80",
 };
 
 export const nodeTypeBorder: Record<NodeType, string> = {
-  steward: "border-amber-500/60",
-  conductor: "border-purple-500/60",
-  agent: "border-zinc-700/60",
+  steward: "border-indigo-300/80",
+  conductor: "border-violet-300/80",
+  agent: "border-slate-300/80",
 };

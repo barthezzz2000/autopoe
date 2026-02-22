@@ -1,16 +1,9 @@
+import { useMemo, useCallback, useState, type MouseEvent } from "react";
 import {
-  useMemo,
-  useCallback,
-  useState,
-  useRef,
-  useEffect,
-  type MouseEvent,
-} from "react";
-import {
+  Controls,
   ReactFlow,
   Background,
-  useReactFlow,
-  useViewport,
+  MiniMap,
   BaseEdge,
   getStraightPath,
   type Node,
@@ -19,20 +12,15 @@ import {
   type NodeTypes,
   type EdgeTypes,
   type NodeMouseHandler,
-  type XYPosition,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { AnimatePresence, motion } from "motion/react";
 import { Network } from "lucide-react";
 import { toast } from "sonner";
 import { AgentGraphNode } from "@/components/AgentGraphNode";
-import { AgentWindow } from "@/components/AgentWindow";
 import { ContextMenu, type ContextMenuEntry } from "@/components/ContextMenu";
 import { getLayoutedElements } from "@/lib/layout";
-import {
-  useAgent,
-  DEFAULT_WIDTH,
-  DEFAULT_HEIGHT,
-} from "@/context/AgentContext";
+import { useAgent } from "@/context/AgentContext";
 import { Badge } from "@/components/ui/badge";
 import { stateBadgeColor } from "@/lib/constants";
 import { terminateNode } from "@/lib/api";
@@ -53,14 +41,39 @@ function AnimatedMessageEdge(props: EdgeProps) {
         id={id}
         path={edgePath}
         style={{
-          stroke: hasActiveMessage ? "#60a5fa" : "#52525b",
-          strokeWidth: 1.5,
+          stroke: hasActiveMessage
+            ? "rgba(99,102,241,0.8)"
+            : "rgba(148,163,184,0.25)",
+          strokeWidth: hasActiveMessage ? 2.5 : 1.5,
         }}
       />
       {hasActiveMessage && (
-        <circle r="4" fill="#60a5fa" filter="url(#glow)">
-          <animateMotion dur="0.8s" repeatCount="indefinite" path={edgePath} />
-        </circle>
+        <>
+          <path
+            d={edgePath}
+            fill="none"
+            stroke="url(#agent-edge-flow)"
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeDasharray="8 6"
+            opacity="0.9"
+          >
+            <animate
+              attributeName="stroke-dashoffset"
+              from="14"
+              to="0"
+              dur="0.6s"
+              repeatCount="indefinite"
+            />
+          </path>
+          <circle r="3" fill="#818cf8" filter="url(#glow)">
+            <animateMotion
+              dur="0.5s"
+              repeatCount="indefinite"
+              path={edgePath}
+            />
+          </circle>
+        </>
       )}
     </>
   );
@@ -87,17 +100,11 @@ export function AgentTree() {
     agents,
     selectedAgentId,
     selectAgent,
-    openAgentWindow,
-    closeAllWindows,
     activeMessages,
     activeToolCalls,
   } = useAgent();
   const [tooltip, setTooltip] = useState<TooltipData | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
-
-  const screenToFlowRef = useRef<((pos: XYPosition) => XYPosition) | null>(
-    null,
-  );
 
   const activeEdgeSet = useMemo(() => {
     const set = new Set<string>();
@@ -142,8 +149,10 @@ export function AgentTree() {
             type: "animated",
             data: { active: isActive },
             style: {
-              stroke: isActive ? "#60a5fa" : "#52525b",
-              strokeWidth: 1.5,
+              stroke: isActive
+                ? "rgba(99,102,241,0.8)"
+                : "rgba(148,163,184,0.25)",
+              strokeWidth: isActive ? 2.5 : 1.5,
             },
             animated: false,
           });
@@ -159,20 +168,10 @@ export function AgentTree() {
   }, [agents, selectedAgentId, activeToolCalls, activeEdgeSet]);
 
   const onNodeClick: NodeMouseHandler = useCallback(
-    (event, node) => {
-      const mouseEvent = event as unknown as MouseEvent;
+    (_, node) => {
       selectAgent(node.id);
-
-      const convert = screenToFlowRef.current;
-      if (convert) {
-        const flowPos = convert({
-          x: mouseEvent.clientX,
-          y: mouseEvent.clientY,
-        });
-        openAgentWindow(node.id, flowPos.x, flowPos.y);
-      }
     },
-    [selectAgent, openAgentWindow],
+    [selectAgent],
   );
 
   const onNodeMouseEnter: NodeMouseHandler = useCallback((event, node) => {
@@ -229,9 +228,7 @@ export function AgentTree() {
 
   const contextMenuItems = useMemo((): ContextMenuEntry[] => {
     if (!contextMenu) return [];
-    const items: ContextMenuEntry[] = [
-      { label: "Close All Windows", onClick: closeAllWindows },
-    ];
+    const items: ContextMenuEntry[] = [];
     if (contextMenu.agentId) {
       const agentId = contextMenu.agentId;
       const node = agents.get(agentId);
@@ -252,20 +249,31 @@ export function AgentTree() {
       });
     }
     return items;
-  }, [contextMenu, closeAllWindows, agents]);
+  }, [contextMenu, agents]);
 
   const tooltipAgent = tooltip ? agents.get(tooltip.agentId) : null;
 
   return (
     <div className="relative flex h-full flex-col">
-      <div className="flex-1 relative overflow-hidden">
+      <div className="relative flex-1 overflow-hidden">
         {nodes.length === 0 ? (
-          <div className="flex h-full items-center justify-center">
-            <div className="text-center space-y-3">
-              <Network className="size-8 text-zinc-600 mx-auto" />
-              <p className="text-sm text-zinc-500">Loading agent graph...</p>
+          <motion.div
+            initial={{ opacity: 0.5 }}
+            animate={{ opacity: 1 }}
+            transition={{
+              repeat: Infinity,
+              repeatType: "mirror",
+              duration: 1.2,
+            }}
+            className="flex h-full items-center justify-center"
+          >
+            <div className="space-y-3 text-center">
+              <Network className="mx-auto size-8 text-primary/50" />
+              <p className="text-sm text-muted-foreground">
+                Loading agent graph...
+              </p>
             </div>
-          </div>
+          </motion.div>
         ) : (
           <ReactFlow
             nodes={nodes}
@@ -287,12 +295,34 @@ export function AgentTree() {
             panOnDrag
             zoomOnScroll
             minZoom={0.3}
-            maxZoom={1.5}
-            className="bg-zinc-950"
+            maxZoom={1.8}
+            className="bg-transparent"
           >
-            <Background color="#27272a" gap={20} size={1} />
+            <Background color="rgba(148,163,184,0.15)" gap={28} size={1} />
+            <MiniMap
+              zoomable
+              pannable
+              className="!rounded-xl !border !border-border/50 !bg-card/80 !shadow-lg"
+              maskColor="rgba(0,0,0,0.4)"
+              nodeColor="rgba(99,102,241,0.8)"
+            />
+            <Controls
+              className="!overflow-hidden !rounded-xl !border !border-border/50 !bg-card/80 !shadow-lg"
+              showInteractive={false}
+            />
             <svg>
               <defs>
+                <linearGradient
+                  id="agent-edge-flow"
+                  x1="0"
+                  y1="0"
+                  x2="1"
+                  y2="0"
+                >
+                  <stop offset="0%" stopColor="#6366f1" stopOpacity="0.2" />
+                  <stop offset="50%" stopColor="#818cf8" stopOpacity="1" />
+                  <stop offset="100%" stopColor="#6366f1" stopOpacity="0.2" />
+                </linearGradient>
                 <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
                   <feGaussianBlur stdDeviation="3" result="blur" />
                   <feMerge>
@@ -302,34 +332,39 @@ export function AgentTree() {
                 </filter>
               </defs>
             </svg>
-            <FlowWindowLayer screenToFlowRef={screenToFlowRef} />
           </ReactFlow>
         )}
       </div>
 
-      {tooltip && tooltipAgent && (
-        <div
-          className="pointer-events-none fixed z-[100] rounded border border-zinc-700 bg-zinc-800 px-3 py-2 shadow-lg"
-          style={{ left: tooltip.x + 12, top: tooltip.y + 12 }}
-        >
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-zinc-200">
-              {tooltipAgent.name ?? (
-                <span className="capitalize">{tooltipAgent.node_type}</span>
-              )}
-            </span>
-            <Badge
-              variant="outline"
-              className={`text-[10px] ${stateBadgeColor[tooltipAgent.state]}`}
-            >
-              {tooltipAgent.state}
-            </Badge>
-          </div>
-          <div className="mt-1 text-[10px] text-zinc-500 font-mono">
-            {tooltip.agentId.slice(0, 8)}
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {tooltip && tooltipAgent ? (
+          <motion.div
+            initial={{ opacity: 0, y: 4, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 2, scale: 0.98 }}
+            transition={{ duration: 0.15 }}
+            className="pointer-events-none fixed z-[100] rounded-xl border border-border/50 bg-card/90 px-3 py-2 shadow-xl backdrop-blur-md"
+            style={{ left: tooltip.x + 12, top: tooltip.y + 12 }}
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium">
+                {tooltipAgent.name ?? (
+                  <span className="capitalize">{tooltipAgent.node_type}</span>
+                )}
+              </span>
+              <Badge
+                variant="outline"
+                className={`text-[10px] ${stateBadgeColor[tooltipAgent.state]}`}
+              >
+                {tooltipAgent.state}
+              </Badge>
+            </div>
+            <div className="mt-1 font-mono text-[10px] text-muted-foreground">
+              {tooltip.agentId.slice(0, 8)}
+            </div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
 
       {contextMenu && (
         <ContextMenu
@@ -339,43 +374,6 @@ export function AgentTree() {
           onClose={closeContextMenu}
         />
       )}
-    </div>
-  );
-}
-
-interface FlowWindowLayerProps {
-  screenToFlowRef: React.MutableRefObject<
-    ((pos: XYPosition) => XYPosition) | null
-  >;
-}
-
-function FlowWindowLayer({ screenToFlowRef }: FlowWindowLayerProps) {
-  const { screenToFlowPosition } = useReactFlow();
-  const viewport = useViewport();
-  const { openWindows } = useAgent();
-
-  useEffect(() => {
-    screenToFlowRef.current = (pos) => {
-      const fp = screenToFlowPosition(pos);
-      return { x: fp.x - DEFAULT_WIDTH / 2, y: fp.y - DEFAULT_HEIGHT / 2 };
-    };
-  }, [screenToFlowPosition, screenToFlowRef]);
-
-  return (
-    <div
-      className="pointer-events-none absolute left-0 top-0 origin-top-left z-50"
-      style={{
-        transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
-      }}
-    >
-      {Array.from(openWindows.entries()).map(([id, ws]) => (
-        <AgentWindow
-          key={id}
-          agentId={id}
-          windowState={ws}
-          zoom={viewport.zoom}
-        />
-      ))}
     </div>
   );
 }

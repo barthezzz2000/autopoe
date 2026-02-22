@@ -17,13 +17,6 @@ import type {
   StewardMessage,
 } from "@/types";
 
-export interface WindowState {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
 export interface ActiveMessage {
   id: string;
   fromId: string;
@@ -39,12 +32,6 @@ interface AgentContextValue {
   connected: boolean;
   selectedAgentId: string | null;
   selectAgent: (id: string | null) => void;
-  openWindows: Map<string, WindowState>;
-  openAgentWindow: (agentId: string, x: number, y: number) => void;
-  closeAgentWindow: (agentId: string) => void;
-  closeAllWindows: () => void;
-  updateWindowPosition: (agentId: string, x: number, y: number) => void;
-  updateWindowSize: (agentId: string, width: number, height: number) => void;
   hoveredAgentId: string | null;
   setHoveredAgentId: (id: string | null) => void;
   agentHistories: Map<string, HistoryEntry[]>;
@@ -60,18 +47,12 @@ interface AgentContextValue {
 
 const AgentContext = createContext<AgentContextValue | null>(null);
 
-export const DEFAULT_WIDTH = 700;
-export const DEFAULT_HEIGHT = 480;
-
 const MESSAGE_ANIMATION_MS = 2000;
 const TOOL_CALL_ANIMATION_MS = 2000;
 
 export function AgentProvider({ children }: { children: ReactNode }) {
   const { agents, events, handleDisplayEvent, handleUpdateEvent } = useAgents();
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
-  const [openWindows, setOpenWindows] = useState<Map<string, WindowState>>(
-    () => new Map(),
-  );
   const [hoveredAgentId, setHoveredAgentId] = useState<string | null>(null);
   const [agentHistories, setAgentHistories] = useState<
     Map<string, HistoryEntry[]>
@@ -272,62 +253,6 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     setSelectedAgentId(id);
   }, []);
 
-  const openAgentWindow = useCallback(
-    (agentId: string, x: number, y: number) => {
-      setOpenWindows((prev) => {
-        if (prev.has(agentId)) return prev;
-        const next = new Map(prev);
-        next.set(agentId, {
-          x,
-          y,
-          width: DEFAULT_WIDTH,
-          height: DEFAULT_HEIGHT,
-        });
-        return next;
-      });
-    },
-    [],
-  );
-
-  const closeAgentWindow = useCallback((agentId: string) => {
-    setOpenWindows((prev) => {
-      if (!prev.has(agentId)) return prev;
-      const next = new Map(prev);
-      next.delete(agentId);
-      return next;
-    });
-  }, []);
-
-  const closeAllWindows = useCallback(() => {
-    setOpenWindows((prev) => (prev.size === 0 ? prev : new Map()));
-  }, []);
-
-  const updateWindowPosition = useCallback(
-    (agentId: string, x: number, y: number) => {
-      setOpenWindows((prev) => {
-        const existing = prev.get(agentId);
-        if (!existing) return prev;
-        const next = new Map(prev);
-        next.set(agentId, { ...existing, x, y });
-        return next;
-      });
-    },
-    [],
-  );
-
-  const updateWindowSize = useCallback(
-    (agentId: string, width: number, height: number) => {
-      setOpenWindows((prev) => {
-        const existing = prev.get(agentId);
-        if (!existing) return prev;
-        const next = new Map(prev);
-        next.set(agentId, { ...existing, width, height });
-        return next;
-      });
-    },
-    [],
-  );
-
   const value = useMemo(
     () => ({
       agents,
@@ -335,12 +260,6 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       connected,
       selectedAgentId,
       selectAgent,
-      openWindows,
-      openAgentWindow,
-      closeAgentWindow,
-      closeAllWindows,
-      updateWindowPosition,
-      updateWindowSize,
       hoveredAgentId,
       setHoveredAgentId,
       agentHistories,
@@ -359,12 +278,6 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       connected,
       selectedAgentId,
       selectAgent,
-      openWindows,
-      openAgentWindow,
-      closeAgentWindow,
-      closeAllWindows,
-      updateWindowPosition,
-      updateWindowSize,
       hoveredAgentId,
       agentHistories,
       clearAgentHistory,
